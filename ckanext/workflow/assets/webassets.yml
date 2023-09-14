@@ -1,0 +1,14 @@
+# workflow-js:
+#   filter: rjsmin
+#   output: ckanext-workflow/%(version)s-workflow.js
+#   contents:
+#     - js/workflow.js
+#   extra:
+#     preload:
+#       - base/main
+
+# workflow-css:
+#   filter: cssrewrite
+#   output: ckanext-workflow/%(version)s-workflow.css
+#   contents:
+#     - css/workflow.css

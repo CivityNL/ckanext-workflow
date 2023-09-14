@@ -1,0 +1,11 @@
+{% ckan_extends %}
+
+{% block content_action %}
+    {{ super() }}
+    {% if h.workflow_show_publish_button(pkg) %}
+        {% link_for _('Publish'), named_route='workflow.publish', id=pkg.name, class_='btn btn-success', icon='fa fa-eye' %}
+    {% endif %}
+    {% if h.workflow_show_unpublish_button(pkg) %}
+        {% link_for _('Unpublish'), named_route='workflow.unpublish', id=pkg.name, class_='btn btn-danger', icon='fa fa-exclamation-circle' %}
+    {% endif %}
+{% endblock %}

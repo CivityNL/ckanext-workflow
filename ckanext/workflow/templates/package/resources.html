@@ -1,0 +1,6 @@
+{% ckan_extends %}
+
+{% block page_primary_action %}
+    {% snippet 'snippets/workflow_edit_warning_snippet.html', pkg=pkg %}
+    {{ super() }}
+{% endblock %}
