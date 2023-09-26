@@ -52,4 +52,6 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
 
 
     def after_update(self, context, data_dict):
-        self.after_create(context, data_dict)
+        # We'll need to do a package_show in case the private field is not in the schema
+        pkg_dict = toolkit.get_action("package_show")(context, data_dict)
+        self.after_create(context, pkg_dict)
