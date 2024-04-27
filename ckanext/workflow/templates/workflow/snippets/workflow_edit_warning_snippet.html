@@ -1,0 +1,17 @@
+{#
+Adds a block of custom form fields.
+
+extras - The fields to add.
+errors - A dict of errors for the fields.
+limit  - The total number of fields that should be output.
+Example:
+
+  {% snippet 'snippets/workflow_edit_warning_snippet.html', pkg=pkg %}
+
+#}
+
+{% set notice_to_be_unpublished_on_edit = _('You are currently managing a public dataset (or a related resource). Editing this dataset, adding resources, or editing any related resources will result in it becoming private again until someone of this organization publishes it again.') %}
+
+{% if h.workflow_show_notice_to_be_unpublished_on_edit(pkg) %}
+    <div class="flash-messages alert info">{{ notice_to_be_unpublished_on_edit }}</div>
+{% endif %}

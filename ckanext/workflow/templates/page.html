@@ -1,0 +1,14 @@
+{% ckan_extends %}
+
+{# The content block allows you to replace the content of the page if needed #}
+{%- block footer %}
+  <footer class="site-footer">
+    <div class="container">{{ h.workflow_get_states() }}</div>
+    <div class="container">{{ h.workflow_get_transitions() }}</div>
+    <div class="container">{{ h.workflow_get_roles() }}</div>
+    {% if pkg_dict %}
+      <div class="container">{{ h.workflow_get_allowed_states(pkg_dict) }}</div>
+    {% endif %}
+  </footer>
+  {{ super() }}
+{% endblock -%}

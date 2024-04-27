@@ -1,0 +1,7 @@
+{% ckan_extends %}
+
+{% block content_action %}
+  {{ super() }}
+  {% snippet 'workflow/snippets/workflow_button.html', pkg=pkg, action='request', title=_('Request') %}
+  {% snippet 'workflow/snippets/workflow_button.html', pkg=pkg, action='assign', title=_('Assign')  %}
+{% endblock %}

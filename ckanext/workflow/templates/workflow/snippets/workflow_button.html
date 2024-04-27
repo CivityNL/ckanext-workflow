@@ -1,0 +1,35 @@
+{#
+  Adds a block of custom form fields.
+
+  pkg
+  action
+  title
+
+#}
+
+{% set states = h.workflow_get_allowed_states(pkg)[action] %}
+
+{% if states | length > 0 %}
+<form method="POST" action="{{ h.url_for('workflow.change', id=pkg.id, package_type=pkg.type ) }}" style="display: inline">
+
+  {% if states | length > 1 %}
+  <div class="dropdown btn-group">
+    <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#">
+      <i class="fa fa-plus-square"></i>
+      {{ title }}
+      <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+      {% for state in states  %}
+        <li><a><button type="submit" name="state" value="{{ state }}" class="btn btn-link" style="all: inherit; padding: 0px; width: 100%">{{ state }}</button></a></li>
+        <!-- <li><a href="{{ url }}">{{ state }}</a></li>
+        <li><a type="submit" name="action" value="{{ state }}">{{ state }}</a></li> -->
+      {% endfor %}
+    </ul>
+  </div>
+  {% elif states | length == 1 %}
+    {% set state = states[0] %}
+    <button class="btn btn-primary" type="submit" name="state" value="{{ state }}">{{ title }}{{ state }}</button>
+  {% endif %}
+</form>  
+{% endif %}
