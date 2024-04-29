@@ -1,6 +1,6 @@
 '''API functions for creating data from CKAN.'''
 
-from ckanext.workflow.plugin.interface import IWorkflowRequestController
+from ckanext.workflow.plugin.interfaces import IWorkflowRequestController
 from ckan.plugins import toolkit, PluginImplementations
 from ckanext.workflow.model import WorkflowRequest
 import ckanext.workflow.logic.schema as workflow_schema

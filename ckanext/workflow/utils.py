@@ -4,7 +4,7 @@ from ckanext.workflow.logic.schema import workflow_state_schema, workflow_transi
 from ckan.exceptions import CkanConfigurationException
 from ckan.plugins import toolkit, PluginImplementations
 from ckan import model
-from ckanext.workflow.plugin.interface import IWorkflow
+from ckanext.workflow.plugin.interfaces import IWorkflow
 from ckanext.workflow.backend import WorkflowState, WorkflowTransition
 from ckan.logic.auth import get_package_object, get_user_object
 
