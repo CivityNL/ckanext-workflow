@@ -2,6 +2,7 @@
 
 '''Constants.'''
 
+import os
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
 from ckanext.workflow import views, helpers, utils
@@ -18,20 +19,9 @@ import ckanext.workflow.constants as workflow_constants
 log = logging.getLogger(__name__)
 
 _add_template_directory = toolkit.add_template_directory # type: ignore
-_chained_action = toolkit.chained_action # type: ignore
 __ = toolkit._ # type: ignore
 
 
-@_chained_action
-def package_create(original_action, context, data_dict):
-    print("chained_action package_create")
-    return original_action(context, data_dict)
-
-
-@_chained_action
-def package_update(original_action, context, data_dict):
-    print("chained_action package_update")
-    return original_action(context, data_dict)
 
 
 class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
@@ -55,6 +45,12 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
             'workflow_state_exists': workflow_validators.state_exists,
             'workflow_request_approval_validator': workflow_validators.request_approval_validator
         }
+    
+    def i18n_directory(self):
+        print(f"{super(WorkflowPlugin, self).i18n_directory()}")
+        path = os.path.abspath(os.path.join(super(WorkflowPlugin, self).i18n_directory(), '..', '..', 'i18n'))
+        print(f" path {path}")
+        return path
 
     # IConfigurable
     def configure(self, config):  
@@ -76,20 +72,20 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
 
     # IConfigurer
     def update_config(self, config_):
-        _add_template_directory(config_, 'templates')
+        _add_template_directory(config_, '../templates')
 
     # IActions
     def get_actions(self):
         workflow_actions = {
-            'workflow_package_set_state': workflow_action.package_set_state,
+            'workflow_package_set_state': workflow_action.update.package_set_state,
             ####
             # 'package_create': package_create,
             # 'package_update': package_update,
-            'workflow_request_show': workflow_action.workflow_request_show,
-            'workflow_request_list': workflow_action.workflow_request_list,
-            'workflow_request_create': workflow_action.workflow_request_create,
-            'workflow_request_update': workflow_action.workflow_request_update,
-            'workflow_request_delete': workflow_action.workflow_request_delete,
+            'workflow_request_show': workflow_action.get.workflow_request_show,
+            'workflow_request_list': workflow_action.get.workflow_request_list,
+            'workflow_request_create': workflow_action.create.workflow_request_create,
+            'workflow_request_update': workflow_action.update.workflow_request_update,
+            'workflow_request_delete': workflow_action.delete.workflow_request_delete,
         }
         update_actions = workflow_constants.WORKFLOW.update_actions
         for action in update_actions:
@@ -99,8 +95,8 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
     # IAuthFunctions
     def get_auth_functions(self):
         workflow_auth_functions = {
-            'workflow_package_set_state': workflow_auth.package_set_state,
-            'package_update': workflow_auth.package_update
+            'workflow_package_set_state': workflow_auth.update.package_set_state,
+            'package_update': workflow_auth.update.package_update
         }
         update_actions = workflow_constants.WORKFLOW.update_actions
         for action in update_actions:
@@ -123,7 +119,18 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
         }
         return workflow_helpers
 
-    
+
+    def create(self, pkg):
+        print(f"IPackageController create pkg={pkg}")
+
+    def after_create(self, context, data):
+        print(f"IPackageController after_create context data={data}")
+
+    def edit(self, pkg):
+        print(f"IPackageController edit pkg={pkg}")
+
+    def after_update(self, context, data):
+        print(f"IPackageController after_update context data={data}")
 
 
     # IFacets:

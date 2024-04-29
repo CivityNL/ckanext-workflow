@@ -13,6 +13,7 @@ from ckanext.workflow import utils
 from ckan.plugins import toolkit
 import ckanext.workflow.helpers as helpers
 from ckan import model
+from ckanext.workflow.views.helpers import get_context
 
 tk__ = toolkit._
 tk_request = toolkit.request
@@ -22,29 +23,6 @@ tk_ObjectNotFound = toolkit.ObjectNotFound
 tk_NotAuthorized = toolkit.NotAuthorized
 tk_h = toolkit.h
 tk_redirect_to = toolkit.redirect_to
-
-
-
-def get_context():
-    return {'model': model, 'session': model.Session, 'user': toolkit.c.user, 'auth_user_obj': toolkit.c.userobj}
-
-
-def load_organization(group_id):
-    context = get_context()
-    extra_vars = {}
-
-    try:
-        extra_vars = {
-            'group_dict': toolkit.get_action('organization_show')(context, {'id': group_id}),
-            'group_type': 'organization'
-        }
-    except toolkit.ObjectNotFound:
-        return toolkit.abort(404, toolkit._('Organization not found'))
-    except toolkit.NotAuthorized:
-        return toolkit.abort(403, toolkit._('Unauthorized to read organization %s') % group_id)
-    for extra_var in extra_vars:
-        setattr(toolkit.g, extra_var, extra_vars.get(extra_var))
-    return extra_vars
 
 
 def load_package(package_id):
@@ -70,7 +48,7 @@ def change(id, package_type):
     """
         Contains the logic for both publish and unpublish
     """
-    context = utils.get_context(True)
+    context = get_context()
     data_dict = dict(tk_request.values.to_dict(), id=id)
     from_state = helpers._get_state(id).label
     try:
@@ -89,7 +67,7 @@ def request(id, package_type):
     """
         Contains the logic for both publish and unpublish
     """
-    context = utils.get_context(True)
+    context = get_context()
     pkg_dict = tk_get_action("package_show")(context, {"id": id})
 
     request = tk_request.values.to_dict()
@@ -120,10 +98,6 @@ def package_requests(id, package_type):
     return toolkit.render('package/workflow.html', extra_vars=load_package(id))
 
 
-def organization_requests(id, group_type, is_organization):
-    return toolkit.render('organization/workflow.html', extra_vars=load_organization(id))
-
-
 workflow_dataset = Blueprint(
     u"workflow_dataset",
     __name__,
@@ -135,14 +109,3 @@ workflow_dataset.add_url_rule(rule=u'/change', view_func=change, methods=['POST'
 workflow_dataset.add_url_rule(rule=u'/request', view_func=request, methods=['POST'])
 workflow_dataset.add_url_rule(rule=u'/requests', view_func=package_requests, methods=['GET'])
 
-workflow_organization = Blueprint(
-    u"workflow_organization",
-    __name__,
-    url_prefix=u'/organization/<id>/workflow',
-    url_defaults={u'group_type': u'organization', u'is_organization': True}
-)
-workflow_organization.add_url_rule(rule=u'/requests', view_func=organization_requests, methods=['GET'])
-
-
-def get_blueprints():
-    return [workflow_dataset, workflow_organization]
