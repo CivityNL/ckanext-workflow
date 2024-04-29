@@ -1,42 +1,37 @@
-from ckan.authz import users_role_for_group_or_org
+# encoding: utf-8
+
+'''Constants.'''
+
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
 from ckanext.workflow import views, helpers, utils
-from ckanext.workflow.logic import action, auth
 from ckan.lib.plugins import DefaultTranslation
 from ckanext.workflow.model import setup as setup_workflow_request_table
 from ckanext.workflow.logic import validators as workflow_validators
 from ckanext.workflow.logic import action as workflow_action
+from ckanext.workflow.logic import auth as workflow_auth
 import logging
-from ckanext.workflow.logic.interface import Workflow
+from ckanext.workflow.backend import Workflow
 import ckan.model as model
 import ckanext.workflow.constants as workflow_constants
 
 log = logging.getLogger(__name__)
 
-def get_workflow_state(context, pkg_name_or_id):
-    pkg_dict = {} if pkg_name_or_id is None else toolkit.get_action("package_show")(context, {"id": pkg_name_or_id})
-    # request = toolkit.get_action("workflow_request_show")(context, {"id": pkg_name_or_id})
-    role = users_role_for_group_or_org(pkg_dict.get("owner_org"), context.get("user"))
-    return dict({k: pkg_dict[k] for k in  pkg_dict}, role=role)
+_add_template_directory = toolkit.add_template_directory # type: ignore
+_chained_action = toolkit.chained_action # type: ignore
+__ = toolkit._ # type: ignore
 
 
-@toolkit.chained_action
+@_chained_action
 def package_create(original_action, context, data_dict):
     print("chained_action package_create")
     return original_action(context, data_dict)
 
 
-@toolkit.chained_action
+@_chained_action
 def package_update(original_action, context, data_dict):
     print("chained_action package_update")
     return original_action(context, data_dict)
-
-@toolkit.chained_auth_function
-@toolkit.auth_sysadmins_check
-def auth_package_update(next_auth, context, data_dict=None):
-    print("chained_auth_function package_update")
-    return next_auth(context, data_dict)
 
 
 class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
@@ -48,6 +43,8 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
     plugins.implements(plugins.ITemplateHelpers)
     plugins.implements(plugins.IBlueprint)
     plugins.implements(plugins.IValidators)
+    plugins.implements(plugins.IFacets)
+    plugins.implements(plugins.IPackageController, inherit=True)
 
 
     # IValidators
@@ -55,7 +52,7 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
         return {
             'workflow_organization_id_exists': workflow_validators.organization_id_exists,
             'workflow_request_id_does_not_exist': workflow_validators.request_id_does_not_exist,
-            'workflow_request_state_exists': workflow_validators.request_state_exists,
+            'workflow_state_exists': workflow_validators.state_exists,
             'workflow_request_approval_validator': workflow_validators.request_approval_validator
         }
 
@@ -74,16 +71,17 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
         states = workflow_constants.WORKFLOW.get_states()
         workflow_constants.WORKFLOW.set_default_state(utils.get_default_state(context, states))
         workflow_constants.WORKFLOW.set_transitions(utils.get_transitions(context, _role_stuff, states))
+        workflow_constants.WORKFLOW.set_update_actions(utils.get_update_actions(context))
 
 
     # IConfigurer
-    def update_config(self, config_):  
-        toolkit.add_template_directory(config_, 'templates')
+    def update_config(self, config_):
+        _add_template_directory(config_, 'templates')
 
     # IActions
     def get_actions(self):
-        return {
-            'workflow_package_set_state': action.package_set_state,
+        workflow_actions = {
+            'workflow_package_set_state': workflow_action.package_set_state,
             ####
             # 'package_create': package_create,
             # 'package_update': package_update,
@@ -93,13 +91,21 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
             'workflow_request_update': workflow_action.workflow_request_update,
             'workflow_request_delete': workflow_action.workflow_request_delete,
         }
+        update_actions = workflow_constants.WORKFLOW.update_actions
+        for action in update_actions:
+            workflow_actions[action] = workflow_action.workflow_chained_action(action, update_actions.get(action))
+        return workflow_actions
 
     # IAuthFunctions
     def get_auth_functions(self):
-        return {
-            'workflow_package_set_state': auth.package_set_state,
-            'package_update': auth_package_update
+        workflow_auth_functions = {
+            'workflow_package_set_state': workflow_auth.package_set_state,
+            'package_update': workflow_auth.package_update
         }
+        update_actions = workflow_constants.WORKFLOW.update_actions
+        for action in update_actions:
+            workflow_auth_functions[action] = workflow_auth.workflow_chained_auth_function(action, update_actions.get(action))
+        return workflow_auth_functions
 
     # IBlueprint
     def get_blueprint(self):
@@ -116,3 +122,25 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
             'workflow_show_notice_to_be_unpublished_on_edit': helpers.show_notice_to_be_unpublished_on_edit
         }
         return workflow_helpers
+
+    
+
+
+    # IFacets:
+    def dataset_facets(self, facets_dict, package_type):
+        facets_dict[workflow_constants.DEFAULT_FIELD] = __('Workflow')
+        return facets_dict
+
+    def organization_facets(self, facets_dict, organization_type, package_type):
+        facets_dict[workflow_constants.DEFAULT_FIELD] = __('Workflow')
+        return facets_dict
+
+    # IPackageController
+    def after_search(self, search_results, data_dict):
+
+        if workflow_constants.DEFAULT_FIELD in search_results['search_facets']:
+            items = search_results['search_facets'][workflow_constants.DEFAULT_FIELD]['items']
+            items = [dict(item, display_name=workflow_constants.WORKFLOW.get_state(item["name"]).label) for item in items]
+            search_results['search_facets'][workflow_constants.DEFAULT_FIELD]['items'] = items
+
+        return search_results

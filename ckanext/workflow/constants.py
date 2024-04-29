@@ -1,6 +1,12 @@
-from ckanext.workflow.logic.interface import Workflow
+# encoding: utf-8
+
+'''Constants.'''
+
+from ckanext.workflow.backend import Workflow
 from ckan.authz import ROLE_PERMISSIONS
 from ckan.plugins import toolkit
+
+__ = toolkit._  # type: ignore
 
 CAPACITIES = []
 PERMISSIONS = []
@@ -13,13 +19,17 @@ DEFAULT_STATE = 'draft'
 DEFAULT_STATES = [
             {
                 'id': 'draft',
-                'label': lambda: toolkit._('Draft'),
+                'label': lambda: __('Draft'),
                 'dataset_fields': {
                     'private': True
                 },
+                'styling': {
+                    'text': '#123456',
+                    'background': '#123456'
+                },
                 'can_update': ["editor", "admin"],
                 'on_update': ["draft"],
-                'update_events': [
+                'update_actions': [
                     {'action': 'package_update'},
                     {'action': 'package_patch'},
                     {'action': 'package_relationship_create'}
@@ -27,13 +37,17 @@ DEFAULT_STATES = [
             },
             {
                 'id': 'private',
-                'label': lambda: toolkit._('Private'),
+                'label': lambda: __('Private'),
                 'dataset_fields': {
                     'private': True
                 },
+                'styling': {
+                    'text': '#123456',
+                    'background': '#123456'
+                },
                 'can_update': ["editor", "admin"],
                 'on_update': ["draft"],
-                'update_events': [
+                'update_actions': [
                     {'action': 'package_update'},
                     {'action': 'package_patch'},
                     {'action': 'package_relationship_create'}
@@ -41,13 +55,17 @@ DEFAULT_STATES = [
             },
             {
                 'id': 'public',
-                'label': lambda: toolkit._('Public'),
+                'label': lambda: __('Public'),
                 'dataset_fields': {
                     'private': False
                 },
+                'styling': {
+                    'text': '#123456',
+                    'background': '#123456'
+                },
                 'can_update': [],
                 'on_update': None,
-                'update_events': [
+                'update_actions': [
                     {'action': 'package_update'},
                     {'action': 'package_patch'},
                     {'action': 'package_relationship_create'}
@@ -59,8 +77,12 @@ DEFAULT_TRANSITIONS = [
     {
         'from_state': 'draft',
         'to_state': 'private',
-        'label': lambda : toolkit._('Review'),
+        'label': lambda : __('Review'),
         'request_required': False,
+        'styling': {
+            'text': '#123456',
+            'background': '#123456'
+        },
 	    'can_request': ["member", "permission-read"],
 	    'can_approve': ["editor", "admin"],
 	    'request_message_required': True,
@@ -70,7 +92,11 @@ DEFAULT_TRANSITIONS = [
     {
         'from_state': 'private',
         'to_state': 'public',
-        'label': lambda : toolkit._('Publish'),
+        'label': lambda : __('Publish'),
+        'styling': {
+            'text': '#123456',
+            'background': '#123456'
+        },
         'request_required': False,
 	    'can_request': ["editor"],
 	    'can_approve': ["admin"],
@@ -81,7 +107,11 @@ DEFAULT_TRANSITIONS = [
     {
         'from_state': 'public',
         'to_state': 'private',
-        'label': lambda : toolkit._('Unpublish'),
+        'label': lambda : __('Unpublish'),
+        'styling': {
+            'text': '#123456',
+            'background': '#123456'
+        },
         'request_required': False,
 	    'can_request': [],
 	    'can_approve': ["editor", "admin"],
@@ -91,6 +121,8 @@ DEFAULT_TRANSITIONS = [
     }
 ]
 
-WORKFLOW: Workflow = None
+WORKFLOW: Workflow
 
 DEFAULT_FIELD = 'workflow_state'
+
+DEFAULT_UPDATE_ACTIONS = ["resource_create", "resource_update", "resource_patch", "resource_delete", "package_update", "package_revise", "package_patch", "package_delete"]

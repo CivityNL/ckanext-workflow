@@ -1,6 +1,5 @@
 from ckan.plugins import toolkit
-from ckanext.workflow.model import WorkflowRequest
-import ckanext.workflow.logic.validators as workflow_validators
+import ckanext.workflow.backend.validators as workflow_validators
 
 empty_if_not_sysadmin = toolkit.get_validator("empty_if_not_sysadmin")
 ignore_missing = toolkit.get_validator("ignore_missing")
@@ -26,35 +25,6 @@ workflow_list_one_of = workflow_validators.list_one_of
 workflow_one_of_validators = workflow_validators.one_of_validators
 workflow_list_one_of_validators = workflow_validators.list_one_of_validators
 workflow_is_function_with_parameters = workflow_validators.is_function_with_parameters
-
-
-def workflow_request_list_schema():
-        pass
-
-
-def workflow_request_create_schema():
- 
-    return {
-        'id': [empty_if_not_sysadmin, ignore_missing, unicode_safe, workflow_request_id_does_not_exist],
-        'package_id': [not_empty, unicode_safe, convert_package_name_or_id_to_id],
-        'organization_id': [not_empty, unicode_safe, convert_group_name_or_id_to_id, workflow_organization_id_exists],
-        'state_id': [not_empty, unicode_safe, workflow_state_exists],
-
-        'request_user_id': [not_empty, unicode_safe, convert_user_name_or_id_to_id],
-        'request_state': [not_empty, unicode_safe, workflow_state_exists],
-        'request_message': [ignore_missing, unicode_safe],
-        'request_timestamp': [empty_if_not_sysadmin, ignore_missing, isodate],
-
-        'process_user_id': [ignore_missing, unicode_safe, convert_user_name_or_id_to_id],
-        'process_message': [ignore_missing, unicode_safe],
-        'process_timestamp': [empty_if_not_sysadmin, ignore_missing, isodate],
-        'process_state': [ignore_missing, unicode_safe, boolean_validator],
-        '__after': [workflow_request_approval_validator]
-    }
-
-
-def workflow_request_update_schema():
-    return workflow_request_create_schema()
 
 
 def workflow_state_schema(roles, states):
@@ -101,14 +71,3 @@ def workflow_transition_schema(roles, states):
         'approve_message_required': [ignore_empty, boolean_validator],
         'reject_message_required': [ignore_empty, boolean_validator]
     }
-
-
-# def workflow_schema(roles):
-#      return {
-#           '__before': [],
-#           'states': [],
-#           'transitions': [],
-#           'update_actions': [],
-#           '__after': []
-#      }
-
