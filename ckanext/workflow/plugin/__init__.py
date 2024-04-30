@@ -60,16 +60,6 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
     def configure(self, config):  
         context = {'model': model, 'session': model.Session}
 
-        print(f"{[plugin for plugin in plugins.PluginImplementations(plugins.IConfigurable)]}")
-        print(f"{_package_plugins.keys()}")
-
-        package_types = list(_package_plugins.keys())
-        if not package_types:
-            package_types = [None]
-
-        for package_type in package_types:
-            print(f"{lookup_package_plugin(package_type).create_package_schema()}")
-
         setup_workflow_request_table()
 
         self.roles = utils.get_roles(context)
