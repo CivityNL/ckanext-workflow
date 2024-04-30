@@ -1,0 +1,21 @@
+{
+    "scheming_version": 1,
+    "dataset_type": "all",
+    "dataset_fields": [
+      {
+        "field_name": "definition",
+        "harmonized_field_name": "definition",
+        "required": false,
+        "validators": "scheming_required",
+        "display_snippet": null,
+        "form_snippet": "text.html",
+        "classes": [
+          "hidden"
+        ],
+        "label": {
+          "en": "definition",
+          "nl": "definition"
+        }
+      }
+    ]
+  }

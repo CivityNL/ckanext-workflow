@@ -39,8 +39,9 @@ def setup():
     if workflow_request_table is None:
         define_workflow_request_table()
         log.debug('Workflow table defined in memory')
-
-    create_table()
+    if not workflow_request_table.exists():
+        workflow_request_table.create()
+        log.debug('Workflow table created')
 
 
 class WorkflowRequest(DomainObject):
@@ -166,8 +167,7 @@ def define_workflow_request_table():
     global workflow_request_table
 
     def get_foreign_key(column: str):
-        # return ForeignKey(column, onupdate="CASCADE", ondelete="CASCADE")
-        return ForeignKey(column)
+        return ForeignKey(column, onupdate="CASCADE", ondelete="CASCADE")
 
     workflow_request_table = Table(
         'workflow_request', meta.metadata,
@@ -202,12 +202,3 @@ def define_workflow_request_table():
             '_requester': orm.relationship(User, primaryjoin=workflow_request_table.c.request_user_id == User.id, uselist=False),
             '_processor': orm.relationship(User, primaryjoin=workflow_request_table.c.process_user_id == User.id, uselist=False)
         },)
-
-
-def create_table():
-    '''
-    Create user_extra table
-    '''
-    if not workflow_request_table.exists():
-        workflow_request_table.create()
-        log.debug('Workflow table created')
