@@ -1,5 +1,6 @@
 from ckan.plugins import toolkit
 import ckanext.workflow.backend.validators as workflow_validators
+from ckan.lib.plugins import _package_plugins
 
 empty_if_not_sysadmin = toolkit.get_validator("empty_if_not_sysadmin")
 ignore_missing = toolkit.get_validator("ignore_missing")
@@ -26,46 +27,50 @@ workflow_one_of_validators = workflow_validators.one_of_validators
 workflow_list_one_of_validators = workflow_validators.list_one_of_validators
 workflow_is_function_with_parameters = workflow_validators.is_function_with_parameters
 
+_fn_has_context_and_data_dict = workflow_is_function_with_parameters(["context", "data_dict"])
+
+def _can_update(roles):
+    return workflow_list_one_of_validators([one_of(roles), workflow_is_function_with_parameters(["context", "pkg_dict"])])
+
+def _on_update(states):
+    return workflow_list_one_of_validators([one_of(states), _fn_has_context_and_data_dict])
+
+
+
 
 def workflow_state_schema(roles, states):
-    from_data_dict = workflow_is_function_with_parameters(["context", "data_dict"])
-    can_update = workflow_list_one_of_validators([one_of(roles), workflow_is_function_with_parameters(["context", "pkg_dict"])])
-    on_update = workflow_list_one_of_validators([one_of(states), from_data_dict])
     return {
         'id': [not_empty, unicode_safe],
         'label': [not_empty, workflow_is_text_function],
         'dataset_fields': [],
-        'can_update': [ignore_empty, can_update],
-        'on_update': [ignore_empty, on_update],
+        'can_update': [ignore_empty, _can_update(roles)],
+        'on_update': [ignore_empty, _on_update(states)],
         'update_actions': workflow_state_update_action_schema(),
         'can_be_skipped': [boolean_validator]
     }
 
 
 def workflow_state_update_action_schema():
-    from_data_dict = workflow_is_function_with_parameters(["context", "data_dict"])
     return {
         'action': [not_empty, unicode_safe],
-        'getter': [ignore_empty, from_data_dict]
+        'getter': [ignore_empty, _fn_has_context_and_data_dict]
     }
 
 
 def workflow_update_action_schema():
-    from_data_dict = workflow_is_function_with_parameters(["context", "data_dict"])
     return {
         'action': [not_empty, unicode_safe],
-        'getter': [ignore_empty, from_data_dict]
+        'getter': [ignore_empty, _fn_has_context_and_data_dict]
     }
 
 
 def workflow_transition_schema(roles, states):
-    can = workflow_list_one_of_validators([one_of(roles), workflow_is_function_with_parameters(["context", "pkg_dict"])])
     return {
         'label': [not_empty, workflow_is_text_function],
         'from_state': [not_empty, unicode_safe, one_of(states)],
         'to_state': [not_empty, unicode_safe, one_of(states)],
-	    'can_request': [ignore_empty, can],
-        'can_approve': [ignore_empty, can],
+	    'can_request': [ignore_empty, _can_update(roles)],
+        'can_approve': [ignore_empty, _can_update(roles)],
         'request_required': [ignore_empty, boolean_validator],
         'request_message_required': [ignore_empty, boolean_validator],
         'approve_message_required': [ignore_empty, boolean_validator],

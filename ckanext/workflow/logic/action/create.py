@@ -10,7 +10,7 @@ tk_chained_action = toolkit.chained_action
 
 @tk_chained_action
 def package_create(original_action, context, data_dict):
-    print("chained_action package_create")
+    print(f"chained_action package_create data_dict={data_dict}")
     return original_action(context, data_dict)
 
 

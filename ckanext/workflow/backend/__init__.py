@@ -151,9 +151,9 @@ class Workflow(object):
 
 
     def get_state(self, state_id) -> WorkflowState:
-        state = next((state for state in self.states if state.id == state_id), None)
-        if state is None:
-            state = self.get_state(self.default_state)
+        state = None
+        if state_id in self.get_states():
+            state = next(state for state in self.states if state.id == state_id)
         return state
 
     def get_states(self):
@@ -173,7 +173,7 @@ class Workflow(object):
             from_state.add_transition(transition)
 
     def set_default_state(self, default_state):
-        self.default_state = default_state
+        self.default_state = self.get_state(default_state)
 
     def set_states(self, states: List[WorkflowState]):
         self.states = states

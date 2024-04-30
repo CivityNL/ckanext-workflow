@@ -6,7 +6,7 @@ import os
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
 from ckanext.workflow import views, helpers, utils
-from ckan.lib.plugins import DefaultTranslation
+from ckan.lib.plugins import DefaultTranslation, _package_plugins, lookup_package_plugin
 from ckanext.workflow.model import setup as setup_workflow_request_table
 from ckanext.workflow.logic import validators as workflow_validators
 from ckanext.workflow.logic import action as workflow_action
@@ -15,6 +15,7 @@ import logging
 from ckanext.workflow.backend import Workflow
 import ckan.model as model
 import ckanext.workflow.constants as workflow_constants
+
 
 log = logging.getLogger(__name__)
 
@@ -47,14 +48,27 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
         }
     
     def i18n_directory(self):
-        print(f"{super(WorkflowPlugin, self).i18n_directory()}")
-        path = os.path.abspath(os.path.join(super(WorkflowPlugin, self).i18n_directory(), '..', '..', 'i18n'))
-        print(f" path {path}")
+        path = os.path.abspath(
+            os.path.join(
+                super(WorkflowPlugin, self).i18n_directory(), 
+                '..', '..', 'i18n'
+            )
+        )
         return path
 
     # IConfigurable
     def configure(self, config):  
         context = {'model': model, 'session': model.Session}
+
+        print(f"{[plugin for plugin in plugins.PluginImplementations(plugins.IConfigurable)]}")
+        print(f"{_package_plugins.keys()}")
+
+        package_types = list(_package_plugins.keys())
+        if not package_types:
+            package_types = [None]
+
+        for package_type in package_types:
+            print(f"{lookup_package_plugin(package_type).create_package_schema()}")
 
         setup_workflow_request_table()
 
@@ -79,8 +93,8 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
         workflow_actions = {
             'workflow_package_set_state': workflow_action.update.package_set_state,
             ####
-            # 'package_create': package_create,
-            # 'package_update': package_update,
+            'package_create': workflow_action.create.package_create,
+            'package_update': workflow_action.update.package_update,
             'workflow_request_show': workflow_action.get.workflow_request_show,
             'workflow_request_list': workflow_action.get.workflow_request_list,
             'workflow_request_create': workflow_action.create.workflow_request_create,
@@ -121,16 +135,36 @@ class WorkflowPlugin(plugins.SingletonPlugin, DefaultTranslation):
 
 
     def create(self, pkg):
-        print(f"IPackageController create pkg={pkg}")
+        print(f"IPackageController create pkg={pkg} extras={pkg.extras}")
+        state = helpers._get_state_pkg(pkg)
+        print(f"IPackageController create state={state}")
+        if state is None:
+            state = workflow_constants.WORKFLOW.default_state
+            pkg.extras[workflow_constants.DEFAULT_FIELD] = state.id
+            pkg.save()
+        else:
+            error = {workflow_constants.DEFAULT_FIELD: "SDGSDFGSDGDFG"}
+            model.Session.rollback()
+            raise toolkit.ValidationError(error)
+
+        print(f"IPackageController create pkg={pkg} extras={pkg.extras}")
+        print(f"state {state}")
 
     def after_create(self, context, data):
+        # We'll need to check if the package is 'valid'
         print(f"IPackageController after_create context data={data}")
+        state = helpers._get_state_pkg_id(data.get("id"))
+        dataset_fields = state.dataset_fields
+        #TODO check if the given values for the required dataset_fields are correct
+        print(f"IPackageController after_create state={state}")
+
 
     def edit(self, pkg):
         print(f"IPackageController edit pkg={pkg}")
 
     def after_update(self, context, data):
         print(f"IPackageController after_update context data={data}")
+        #TODO check if the given values for the required dataset_fields are correct
 
 
     # IFacets:
