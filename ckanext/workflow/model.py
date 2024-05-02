@@ -6,7 +6,6 @@ from __future__ import print_function
 import sqlalchemy.orm as orm
 import sqlalchemy.types as types
 import logging
-import ckan.model as model
 from ckan.model import meta, Group, User, Package, DomainObject
 import ckan.model.types as _types
 import datetime
@@ -16,7 +15,7 @@ from sqlalchemy import Table, Column, ForeignKey, Index, CheckConstraint, Foreig
 mapper = orm.mapper
 log = logging.getLogger(__name__)
 
-workflow_request_table = None
+workflow_request_table: Table = None
 
 
 # list of states
@@ -39,6 +38,7 @@ def setup():
     if workflow_request_table is None:
         define_workflow_request_table()
         log.debug('Workflow table defined in memory')
+    assert workflow_request_table is not None
     if not workflow_request_table.exists():
         workflow_request_table.create()
         log.debug('Workflow table created')

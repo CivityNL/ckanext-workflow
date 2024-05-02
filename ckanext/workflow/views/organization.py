@@ -9,12 +9,10 @@ Shannon entropy and frequency normalization.
 """
 
 from flask import Blueprint
-from ckanext.workflow import utils
 from ckan.plugins import toolkit
-import ckanext.workflow.helpers as helpers
-from ckan import model
 from ckanext.workflow.views.helpers import get_context
 
+# noinspection PyProtectedMember
 tk__ = toolkit._
 tk_request = toolkit.request
 tk_get_action = toolkit.get_action
@@ -31,13 +29,13 @@ def load_organization(group_id):
 
     try:
         extra_vars = {
-            'group_dict': toolkit.get_action('organization_show')(context, {'id': group_id}),
+            'group_dict': tk_get_action('organization_show')(context, {'id': group_id}),
             'group_type': 'organization'
         }
     except toolkit.ObjectNotFound:
-        return toolkit.abort(404, toolkit._('Organization not found'))
+        return toolkit.abort(404, tk__('Organization not found'))
     except toolkit.NotAuthorized:
-        return toolkit.abort(403, toolkit._('Unauthorized to read organization %s') % group_id)
+        return toolkit.abort(403, tk__('Unauthorized to read organization %s') % group_id)
     for extra_var in extra_vars:
         setattr(toolkit.g, extra_var, extra_vars.get(extra_var))
     return extra_vars

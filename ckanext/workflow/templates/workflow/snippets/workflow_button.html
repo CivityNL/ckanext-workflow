@@ -29,7 +29,7 @@
     </a>
     <ul class="dropdown-menu">
       {% for state in states  %}
-        <li><a><button type="submit" name="state" value="{{ state }}" class="btn btn-link" style="all: inherit; padding: 0px; width: 100%">{{ state }}</button></a></li>
+        <li><a><button type="submit" name="state" value="{{ state }}" class="btn btn-link" style="all: inherit; padding: 0; width: 100%">{{ state }}</button></a></li>
         <li><a href="{{ h.url_for(named_route, id=pkg.id, package_type=pkg.type, state=state ) }}" data-module="confirm-action" data-module-content="{{ _('Are you sure you want to purge everything?') }}">{{ state }} confirm-action</a></li>
         <!-- <li><a type="submit" name="action" value="{{ state }}">{{ state }}</a></li> -->
       {% endfor %}

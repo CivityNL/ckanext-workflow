@@ -8,22 +8,19 @@ import ckanext.workflow.logic.auth.update as update
 import ckanext.workflow.logic.auth.delete as delete
 
 tk_chained_auth_function = toolkit.chained_auth_function
+# noinspection PyProtectedMember
 tk__ = toolkit._
 
 
 def workflow_chained_auth_function(action, getter):
-    
     @tk_chained_auth_function
     def chained_auth_action(original_action, context, data_dict):
-        print(f"chained_auth_action {action}")
         original_result = original_action(context, data_dict)
         original_success = original_result.get("success")
         result = original_result
         if not original_success:
             result = original_result
-        elif context.get("workflow_auth_checked", False):
-            print(f"chained_auth_action {action} workflow_auth_checked = {context.get('workflow_auth_checked', False)}")
-        else:
+        elif not context.get("workflow_auth_checked", False):
             package_ids = getter(context, data_dict)
             if not package_ids:
                 return original_action(context, data_dict)

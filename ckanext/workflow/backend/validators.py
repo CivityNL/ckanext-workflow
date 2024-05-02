@@ -3,6 +3,7 @@ from ckanext.workflow.model import WorkflowRequest
 from ckan.plugins import toolkit
 import ckanext.workflow.constants as workflow_constants
 
+# noinspection PyProtectedMember
 _ = toolkit._
 
 unicode_only = toolkit.get_validator("unicode_only")
@@ -30,7 +31,7 @@ def organization_id_exists(organization_id: str, context: Dict) -> str:
     session = context['session']
 
     result = session.query(model.Group).get(organization_id)
-    print(f"organization_id_exists {result}")
+
     if not result or not result.is_organization:
         raise toolkit.Invalid('%s: %s' % (_('Not found'), _('Organization')))
     return organization_id
@@ -43,7 +44,6 @@ def state_exists(state):
 
 
 def request_approval_validator(key, converted_data, errors, context):
-    print(f"key={key}, converted_data={converted_data}, errors={errors}")
     pass
 
 
@@ -56,19 +56,20 @@ def is_function(value: Callable):
     return value
 
 
-def is_function_with_parameters(varnames):
+def is_function_with_parameters(parameters):
     """
         Returns a 
     """    
     
     '''Raises Invalid if the given value is not a function (can't be called)'''   
-    def callable(value):
+    def _is_function_with_parameters(value):
         value = is_function(value)
-        func_varnames = set(value.__code__.co_varnames[:value.__code__.co_argcount])
-        if not func_varnames == set(varnames):
+        # noinspection PyUnresolvedReferences
+        func_parameters = set(value.__code__.co_varnames[:value.__code__.co_argcount])
+        if not func_parameters == set(parameters):
             raise toolkit.Invalid(_('is_function_with_parameters'))
         return value
-    return callable
+    return _is_function_with_parameters
     
 
 def is_text_function(text_function: Callable[[], str]) -> Callable[[], str]:
@@ -86,17 +87,17 @@ def is_text_function(text_function: Callable[[], str]) -> Callable[[], str]:
 
 def list_one_of(list_of_value):
 
-    def callable(value):
+    def _list_one_of(value):
         if not isinstance(value, list):
             value = [value]
         for v in value:
             one_of(list_of_value)(v)
         return value
-    return callable
+    return _list_one_of
 
 
 def one_of_validators(list_of_validators):
-    def callable(value):
+    def _one_of_validators(value):
         for validator in list_of_validators:
             try:
                 validator(value)
@@ -104,14 +105,14 @@ def one_of_validators(list_of_validators):
             except toolkit.Invalid as e:
                 pass
         raise toolkit.Invalid(_('Value must be one of {}'.format(list_of_validators)))
-    return callable
+    return _one_of_validators
 
 
 def list_one_of_validators(list_of_validators):
-    def callable(value):
+    def _list_one_of_validators(value):
         if not isinstance(value, list):
             value = [value]
         for v in value:
             one_of_validators(list_of_validators)(v)
         return value
-    return callable
+    return _list_one_of_validators

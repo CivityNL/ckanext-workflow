@@ -4,10 +4,12 @@
   "about_url": "http://github.com/open-data/ckanext-repeating",
   "presets": [
     {
-      "preset_name": "repeating_text_definition",
+      "preset_name": "workflow_state",
       "values": {
-        "validators": "scheming_required repeating_text",
-        "output_validators": "repeating_text_output"
+        "form_snippet": "select.html",
+        "display_snippet": "select.html",
+        "choices_helper": "workflow_choices_helper",
+        "validators": "scheming_choices"
       }
     }
   ]

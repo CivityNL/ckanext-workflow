@@ -1,12 +1,12 @@
-from ckan.plugins.interfaces import Interface
 from ckan.plugins import toolkit
 from typing import Callable, Dict, List
 from ckanext.workflow.logic.validators import is_function_with_parameters as _is_function_with_parameters_validator
 import ckanext.workflow.constants as workflow_constants
-from ckan.authz import users_role_for_group_or_org, has_user_permission_for_group_or_org, user_is_collaborator_on_dataset
+from ckan.authz import users_role_for_group_or_org, has_user_permission_for_group_or_org, user_is_collaborator_on_dataset, is_sysadmin
 
-_Invalid = toolkit.Invalid # type: ignore
-_check_access = toolkit.check_access # type: ignore
+_Invalid = toolkit.Invalid
+_check_access = toolkit.check_access
+
 
 def is_function(value):
     result = True
@@ -29,7 +29,7 @@ class _WorkflowObject(object):
         return self._label()
         
     def __init__(self, **kwargs):
-        self._label: Callable
+        self._label = None
         if "label" in kwargs:
             kwargs["_label"] = kwargs.pop("label")
         self.__dict__.update(kwargs)
@@ -56,7 +56,7 @@ class WorkflowState(_WorkflowObject):
         self.on_update = None
         self.update_actions: List[Dict[str, Callable]] = []
         self.transitions: List[WorkflowTransition] = []
-        super().__init__(**kwargs)
+        super(self, WorkflowState).__init__(**kwargs)
 
     def add_transition(self, transition):
         self.transitions.append(transition)
@@ -65,7 +65,6 @@ class WorkflowState(_WorkflowObject):
         return len(self.transitions) > 0
     
     def state_on_update(self, action, context, pkg_dict):
-        result = self.id
         if self.on_update is not None:
             result = self.id
         elif not isinstance(self.on_update, dict):
@@ -85,12 +84,12 @@ class WorkflowState(_WorkflowObject):
         return self._check_allowed(context, self.can_update, user_id, pkg_id, org_id)    
 
     def _check_allowed(self, context, checks, user_id, pkg_id, org_id):
-        result = _check_access('sysadmin', context, {})
+        result = is_sysadmin(user_id)
         for check in checks:
             if result:
                 break            
             if is_function(check):
-                result = check(context=None, pkg_dict=None)
+                result = check(context=context, pkg_dict=None)
             elif check in workflow_constants.CAPACITIES:
                 result = users_role_for_group_or_org(org_id, user_id) == check
                 if not result:
@@ -104,8 +103,8 @@ class WorkflowState(_WorkflowObject):
 class WorkflowTransition(_WorkflowObject):
 
     def __init__(self, **kwargs):
-        self.origin: WorkflowState
-        self.destination: WorkflowState
+        self.origin = None
+        self.destination = None
         self.request_required = None
         self.can_request = []
         self.can_approve = []
@@ -115,12 +114,12 @@ class WorkflowTransition(_WorkflowObject):
         super().__init__(**kwargs)
 
     def _check_allowed(self, context, checks, user_id, pkg_id, org_id):
-        result = _check_access('sysadmin', context, {})
+        result = is_sysadmin(user_id)
         for check in checks:
             if result:
                 break            
             if is_function(check):
-                result = check(context=None, pkg_dict=None)
+                result = check(context=context, pkg_dict=None)
             elif check in workflow_constants.CAPACITIES:
                 result = users_role_for_group_or_org(org_id, user_id) == check
                 if not result:
@@ -161,6 +160,7 @@ class Workflow(object):
 
     def __init__(self, states):
         self.transitions = []
+        self.update_actions = None
         self.default_state = None
         self.set_states(states)
 
@@ -194,7 +194,7 @@ class Workflow(object):
         elif not isinstance(actions, list):
             actions = [actions]
 
-        sysadmin = toolkit.check_access('sysadmin', context, {})
+        sysadmin = is_sysadmin(user_id)
         if sysadmin:
             return [state for state in self.get_states() if state != state_id]
 
