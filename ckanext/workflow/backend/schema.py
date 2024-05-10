@@ -1,6 +1,9 @@
 from ckan.plugins import toolkit
 import ckanext.workflow.backend.validators as workflow_validators
 
+# logging
+import logging
+log = logging.getLogger(__name__)
 
 unicode_safe = toolkit.get_validator("unicode_safe")
 not_empty = toolkit.get_validator("not_empty")
@@ -8,6 +11,7 @@ boolean_validator = toolkit.get_validator("boolean_validator")
 one_of = toolkit.get_validator("one_of")
 ignore_empty = toolkit.get_validator("ignore_empty")
 
+workflow_one_of_validators = workflow_validators.one_of_validators
 workflow_is_text_function = workflow_validators.is_text_function
 workflow_list_one_of_validators = workflow_validators.list_one_of_validators
 workflow_is_function_with_parameters = workflow_validators.is_function_with_parameters
@@ -21,7 +25,15 @@ def _can_update(roles):
 
 
 def _on_update(states):
-    return workflow_list_one_of_validators([one_of(states), _fn_has_context_and_data_dict])
+    return workflow_one_of_validators([one_of(states), _fn_has_context_and_data_dict])
+
+
+def workflow_schema(roles, states):
+    return {
+        'states': workflow_state_schema(roles, states),
+        'transitions': workflow_transition_schema(roles, states)
+
+    }
 
 
 def workflow_state_schema(roles, states):

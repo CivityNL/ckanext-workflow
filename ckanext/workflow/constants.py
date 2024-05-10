@@ -5,6 +5,9 @@
 from ckanext.workflow.backend import Workflow
 from ckan.authz import ROLE_PERMISSIONS
 from ckan.plugins import toolkit
+# logging
+import logging
+log = logging.getLogger(__name__)
 
 # noinspection PyProtectedMember
 __ = toolkit._  # type: ignore
@@ -30,7 +33,7 @@ DEFAULT_STATES = [
             'background': '#123456'
         },
         'can_update': ["editor", "admin"],
-        'on_update': ["draft"],
+        'on_update': "draft",
         'update_actions': [
             {'action': 'package_update'},
             {'action': 'package_patch'},
@@ -48,7 +51,7 @@ DEFAULT_STATES = [
             'background': '#123456'
         },
         'can_update': ["editor", "admin"],
-        'on_update': ["draft"],
+        'on_update': "draft",
         'update_actions': [
             {'action': 'package_update'},
             {'action': 'package_patch'},
@@ -66,7 +69,7 @@ DEFAULT_STATES = [
             'background': '#123456'
         },
         'can_update': [],
-        'on_update': None,
+        'on_update': 'private',
         'update_actions': [
             {'action': 'package_update'},
             {'action': 'package_patch'},
@@ -127,5 +130,5 @@ WORKFLOW: Workflow
 
 DEFAULT_FIELD = 'workflowstatenewpleasework'
 
-DEFAULT_UPDATE_ACTIONS = ["resource_create", "resource_update", "resource_patch", "resource_delete", "package_update",
-                          "package_revise", "package_patch"]
+DEFAULT_UPDATE_ACTIONS = ["resource_create", "resource_update", "resource_patch", "resource_delete",
+                          "package_update", "package_revise", "package_patch"]

@@ -1,9 +1,12 @@
 '''API functions for creating data from CKAN.'''
-
-from ckanext.workflow.plugin.interfaces import IWorkflowRequestController
+from ckanext.workflow.model.workflow_request import REQUEST_STATE_PENDING
+from ckanext.workflow.plugins.interfaces import IWorkflowRequestController
 from ckan.plugins import toolkit, PluginImplementations
-from ckanext.workflow.model import WorkflowRequest
+from ckanext.workflow.model import WorkflowRequest, WorkflowState
 import ckanext.workflow.logic.schema as workflow_schema
+import ckanext.workflow.common as common
+
+log = common.getLogger(__name__)
 
 
 def workflow_request_create(context, data_dict):
@@ -14,27 +17,45 @@ def workflow_request_create(context, data_dict):
     :return:
     """
     ###
+
+    print("workflow_request_create workflow_request_create workflow_request_create")
+
+    # get information from context
     model = context["model"]
     session = context["session"]
     user = context["user"]
 
-    # fill
-    if 'request_user_id' not in data_dict or not data_dict['request_user_id']:
-        data_dict['request_user_id'] = user
+    common.check_access('workflow_request_create', context, data_dict)
 
-    schema = workflow_schema.workflow_request_create_schema()
-
-    request_dict, errors = toolkit.navl_validate(data_dict, schema, context)
+    # check if all the information given is valid
+    print("before validate")
+    data_dict, errors = common.navl_validate(data_dict, workflow_schema.workflow_request_create_schema(), context)
+    print("after validate")
+    print(f"data_dict = {data_dict}")
+    print(f"errors = {errors}")
     if errors:
-        session.rollback()
-        raise toolkit.ValidationError(errors)
+        raise common.ValidationError(errors)
+
+    request = WorkflowRequest(**data_dict)
+    session.add(request)
+    session.flush()
 
     for plugin in PluginImplementations(IWorkflowRequestController):
-        plugin.before_request_create(context, request_dict)
+        plugin.after_request_create(context, data_dict)
 
-    request = WorkflowRequest(**request_dict)
-    request.save()
+    # Create activity
+    activity = model.Activity(
+        request.requester.id,
+        request.package.id,
+        "new request",
+        {
+            'request': request.as_dict(),
+            'actor': request.requester.name if request.requester else None
+        }
+    )
+    session.add(activity)
 
-    for plugin in PluginImplementations(IWorkflowRequestController):
-        plugin.after_request_create(context, request_dict)
+    if not context.get('defer_commit'):
+        model.repo.commit()
+
     return request.as_dict()

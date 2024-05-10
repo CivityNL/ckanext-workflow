@@ -5,10 +5,13 @@ from ckanext.workflow.backend.schema import workflow_state_schema, workflow_tran
     workflow_update_action_schema
 from ckan.exceptions import CkanConfigurationException
 from ckan.plugins import toolkit, PluginImplementations
-from ckan import model
-from ckanext.workflow.plugin.interfaces import IWorkflow
+from ckanext.workflow.common import model
+from ckanext.workflow.plugins.interfaces import IWorkflow
 from ckanext.workflow.backend import WorkflowState, WorkflowTransition
 from ckan.logic.auth import get_package_object
+# logging
+import logging
+log = logging.getLogger(__name__)
 
 _check_access = toolkit.check_access
 _NotAuthorized = toolkit.NotAuthorized
@@ -116,13 +119,19 @@ def get_transitions(context, roles, states):
     return result
 
 
-def get_update_actions(context):
-    def default_getter(context, data_dict):
-        pkg = get_package_object(context, data_dict)
-        return pkg.id if pkg is not None else None
+def default_getter(context, data_dict):
+    pkg = get_package_object(context, data_dict)
+    return pkg.id if pkg is not None else None
+
+
+def get_update_actions():
+    """
+
+    :return:
+    """
 
     update_actions = {update_action: default_getter for update_action in DEFAULT_UPDATE_ACTIONS}
-    plugin: IWorkflow
+
     for plugin in PluginImplementations(IWorkflow):
         update_actions = plugin.get_update_actions(update_actions)
 
@@ -135,11 +144,14 @@ def get_update_actions(context):
             action_getter = default_getter
             update_actions[update_action] = default_getter
         data = {'action': update_action, 'getter': update_actions.get(update_action)}
-        _, update_action_errors = _navl_validate(data, schema, context)
+        _, update_action_errors = _navl_validate(data, schema, {})
         if update_action_errors:
             errors[update_action] = update_action_errors
 
     if errors:
         raise _ValidationError(errors, 'get_update_actions_error_summary', 'get_update_actions_extra_msg')
+
+    if 'package_update' in update_actions:
+        del update_actions['package_update']
 
     return update_actions

@@ -10,7 +10,9 @@ Welcome to ckanext-workflow's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   plugin-interfaces
+   plugin
+   logic
+   common
 
 
 

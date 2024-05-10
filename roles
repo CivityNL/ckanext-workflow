@@ -1,0 +1,14 @@
+[
+  {
+    "text": "Admin",
+    "value": "admin"
+  },
+  {
+    "text": "Editor",
+    "value": "editor"
+  },
+  {
+    "text": "Member",
+    "value": "member"
+  }
+]

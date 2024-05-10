@@ -2,6 +2,10 @@ from typing import Dict, Callable
 from ckanext.workflow.model import WorkflowRequest
 from ckan.plugins import toolkit
 import ckanext.workflow.constants as workflow_constants
+# logging
+import logging
+log = logging.getLogger(__name__)
+
 
 # noinspection PyProtectedMember
 _ = toolkit._

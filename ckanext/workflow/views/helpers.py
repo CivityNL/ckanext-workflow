@@ -1,6 +1,12 @@
-from ckan.plugins import toolkit
-from ckan import model
+import ckanext.workflow.common as common
+
+log = common.getLogger(__name__)
 
 
 def get_context():
-    return {'model': model, 'session': model.Session, 'user': toolkit.c.user, 'auth_user_obj': toolkit.c.userobj}
+    return {
+        'model': common.model,
+        'session': common.model.Session,
+        'user': common.c.user,
+        'auth_user_obj': common.c.userobj
+    }

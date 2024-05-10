@@ -84,7 +84,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points='''
         [ckan.plugins]
-        workflow=ckanext.workflow.plugin:WorkflowPlugin
+        workflow=ckanext.workflow.plugins.plugin:WorkflowPlugin
 
         [babel.extractors]
         ckan = ckan.lib.extract:extract_ckan

@@ -1,13 +1,17 @@
 # encoding: utf-8
 
 '''Helper functions.'''
+
 from typing import List
 
 from ckanext.workflow import utils
 import ckanext.workflow.constants as workflow_constants
-import ckan.model as model
 from ckan.plugins import toolkit
-from ckan.logic.auth import get_package_object
+from ckanext.workflow.common import model
+
+# logging
+import logging
+log = logging.getLogger(__name__)
 
 convert_package_name_or_id_to_id = toolkit.get_converter('convert_package_name_or_id_to_id')
 
@@ -93,7 +97,6 @@ def workflow_choices_helper(field: dict) -> List[dict[str, str]]:
     pkg = getattr(toolkit.g, 'pkg', None)
     # if not try to get it from either the view_args (view) or the payload (action)
     if pkg is None:
-        print(toolkit.request.view_args)
         data_dict = None
         if "logic_function" in toolkit.request.view_args:
             data_dict = toolkit.request.get_json()

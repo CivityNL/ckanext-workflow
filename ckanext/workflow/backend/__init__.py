@@ -1,8 +1,13 @@
 from ckan.plugins import toolkit
 from typing import Callable, Dict, List
-from ckanext.workflow.logic.validators import is_function_with_parameters as _is_function_with_parameters_validator
+from ckanext.workflow.backend.validators import is_function_with_parameters as _is_function_with_parameters_validator
 import ckanext.workflow.constants as workflow_constants
 from ckan.authz import users_role_for_group_or_org, has_user_permission_for_group_or_org, user_is_collaborator_on_dataset, is_sysadmin
+
+# logging
+import logging
+log = logging.getLogger(__name__)
+
 
 _Invalid = toolkit.Invalid
 _check_access = toolkit.check_access
@@ -56,7 +61,7 @@ class WorkflowState(_WorkflowObject):
         self.on_update = None
         self.update_actions: List[Dict[str, Callable]] = []
         self.transitions: List[WorkflowTransition] = []
-        super(self, WorkflowState).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def add_transition(self, transition):
         self.transitions.append(transition)
@@ -65,7 +70,8 @@ class WorkflowState(_WorkflowObject):
         return len(self.transitions) > 0
     
     def state_on_update(self, action, context, pkg_dict):
-        if self.on_update is not None:
+        print(f"state_on_update -> {self.on_update}")
+        if self.on_update is None:
             result = self.id
         elif not isinstance(self.on_update, dict):
             result = self.on_update
@@ -77,17 +83,18 @@ class WorkflowState(_WorkflowObject):
                 result = on_update_action(context=context, pkg_dict=pkg_dict)
             else:
                 result = on_update_action
+        print(f"state_on_update -> {result}")
         return result
 
 
     def update_allowed(self, context, user_id, pkg_id, org_id):
-        return self._check_allowed(context, self.can_update, user_id, pkg_id, org_id)    
+        return self._check_allowed(context, self.can_update, user_id, pkg_id, org_id)
 
     def _check_allowed(self, context, checks, user_id, pkg_id, org_id):
         result = is_sysadmin(user_id)
         for check in checks:
             if result:
-                break            
+                break
             if is_function(check):
                 result = check(context=context, pkg_dict=None)
             elif check in workflow_constants.CAPACITIES:
@@ -99,7 +106,6 @@ class WorkflowState(_WorkflowObject):
         return result    
 
 
-
 class WorkflowTransition(_WorkflowObject):
 
     def __init__(self, **kwargs):
@@ -108,7 +114,7 @@ class WorkflowTransition(_WorkflowObject):
         self.request_required = None
         self.can_request = []
         self.can_approve = []
-        self.request_message_required = None        
+        self.request_message_required = None
         self.approve_message_required = None
         self.reject_message_required = None
         super().__init__(**kwargs)
@@ -117,7 +123,7 @@ class WorkflowTransition(_WorkflowObject):
         result = is_sysadmin(user_id)
         for check in checks:
             if result:
-                break            
+                break
             if is_function(check):
                 result = check(context=context, pkg_dict=None)
             elif check in workflow_constants.CAPACITIES:
@@ -148,6 +154,14 @@ class WorkflowTransition(_WorkflowObject):
 
 class Workflow(object):
 
+    transition_dict = {}
+    states_dict = {}
+
+    def has_transition(self, from_state_id, to_state_id):
+        return from_state_id in self.transition_dict and to_state_id in self.transition_dict[from_state_id]
+
+    def get_transition(self, from_state_id, to_state_id):
+        return self.transition_dict.get(from_state_id, {}).get(to_state_id, None)
 
     def get_state(self, state_id) -> WorkflowState:
         state = None
@@ -177,11 +191,16 @@ class Workflow(object):
 
     def set_states(self, states: List[WorkflowState]):
         self.states = states
+        self.states_dict = {state.id: state for state in states}
         if self.transitions:
             self._init_states()
 
-    def set_transitions(self, transitions):
+    def set_transitions(self, transitions: List[WorkflowTransition]):
         self.transitions = transitions
+        for t in transitions:
+            if t.from_state not in self.transition_dict:
+                self.transition_dict[t.from_state] = {}
+            self.transition_dict[t.from_state][t.to_state] = t
         if self.states:
             self._init_states()
 

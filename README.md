@@ -4,6 +4,27 @@
 
 **TODO:** Put a description of your extension here:  What does it do? What features does it have? Consider including some screenshots or embedding a video!
 
+AUTH: check if an user is allowed which might be impacted by ValidationErrors
+ACTION: check if the request is valid
+
+
+## Current decisions
+
+special roles are:
+- sysadmin
+- org admin
+- collab admin
+
+- requests:
+  - on create
+    - uses by default as request_user_id the current logged in user (except special roles)
+  - on update
+    - only messages can be updated
+      - request_message if still pending by request_user (except special roles)
+      - approve_message if approved by approve_user (except special roles)
+    - special roles can also update:
+      - request_user_id
+
 
 ## Requirements
 

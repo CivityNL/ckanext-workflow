@@ -11,6 +11,9 @@ Shannon entropy and frequency normalization.
 from flask import Blueprint
 from ckan.plugins import toolkit
 from ckanext.workflow.views.helpers import get_context
+# logging
+import logging
+log = logging.getLogger(__name__)
 
 # noinspection PyProtectedMember
 tk__ = toolkit._

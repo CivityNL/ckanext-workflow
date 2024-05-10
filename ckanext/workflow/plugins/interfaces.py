@@ -1,4 +1,13 @@
+# encoding: utf-8
+
+u"""A collection of interfaces that CKAN plugins can implement to customize and
+extend ckanext-workflow."""
+
 from ckan.plugins.interfaces import Interface
+
+# logging
+import logging
+log = logging.getLogger(__name__)
 
 
 class IWorkflow(Interface):

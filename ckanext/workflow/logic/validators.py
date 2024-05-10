@@ -1,16 +1,182 @@
 from typing import Dict, Callable
-
-from ckan.lib.navl.dictization_functions import unflatten
-from ckanext.workflow.model import WorkflowRequest
-from ckan.plugins import toolkit
+from ckanext.workflow.model import WorkflowRequest, WorkflowState
+from ckanext.workflow.model.workflow_request import REQUEST_STATE_PENDING, REQUEST_STATE_APPROVED, REQUEST_STATE_REJECTED
+import ckanext.workflow.common as common
 import ckanext.workflow.helpers as workflow_helpers
 import ckanext.workflow.constants as workflow_constants
+# logging
+import logging
 
-# noinspection PyProtectedMember
-_ = toolkit._
+log = logging.getLogger(__name__)
 
-unicode_only = toolkit.get_validator("unicode_only")
-one_of = toolkit.get_validator("one_of")
+unicode_only = common.get_validator("unicode_only")
+one_of = common.get_validator("one_of")
+empty = common.get_validator("empty")
+
+
+def has_errors(fields, errors):
+    return sum(len(errors.get((field,))) for field in fields) > 0
+
+
+def get_values(fields, data):
+    return [data.get((field,)) for field in fields]
+
+
+def process_message_required(
+        package_id_field='package_id', request_state_field='request_state',
+        process_state_field='process_state', process_message_field='process_message'
+):
+    def _process_message_required(key, data, errors, context):
+        print(f"process_message_required")
+        fields = [package_id_field, request_state_field, process_state_field, process_message_field]
+        if has_errors(fields, errors):
+            return
+        package_id, request_state, process_state, process_message = get_values(fields, data)
+        workflow_state = WorkflowState.get(package_id)
+        workflow_transition = workflow_constants.WORKFLOW.get_transition(workflow_state.state_id, request_state)
+
+        if not process_message and process_state in WorkflowRequest.states(handled=True):
+            if process_state == REQUEST_STATE_APPROVED and workflow_transition.approve_message_required:
+                errors[(process_message_field,)].append(
+                    common.ugettext('Process state "{}" requires a process_message').format(process_state)
+                )
+            if process_state == REQUEST_STATE_REJECTED and workflow_transition.reject_message_required:
+                errors[(process_message_field,)].append(
+                    common.ugettext('Process state "{}" requires a process_message').format(process_state)
+                )
+
+
+    return _process_message_required
+
+
+def process_user_id_required(
+        process_state_field='process_state', process_user_id_field='process_user_id'
+):
+    def _process_user_id_required(key, data, errors, context):
+        print(f"process_user_id_required")
+        process_state = data.get((process_state_field,))
+        process_user_id = data.get((process_user_id_field,))
+        # check if the current process_state makes sense
+        if process_state is not common.missing and process_state and process_state in WorkflowRequest.states():
+            if process_state not in WorkflowRequest.states(open=True):
+                if process_user_id is common.missing or not process_user_id:
+                    errors[(process_user_id_field,)].append(
+                        common.ugettext('Process state "{}" requires a process_user_id').format(process_state))
+
+    return _process_user_id_required
+
+
+def transition_exists(
+        package_id_field='package_id', request_state_field='request_state'
+):
+    def _transition_exists(key, data, errors, context):
+        print(f"request_message_required")
+        package_id = data.get((package_id_field,))
+        request_state = data.get((request_state_field,))
+        workflow_state = WorkflowState.get(package_id)
+        workflow_transition = None
+        if workflow_state:
+            workflow_transition = workflow_constants.WORKFLOW.get_transition(workflow_state.state_id, request_state)
+
+        if workflow_state and not workflow_transition:
+            errors[(request_state_field,)].append(common.ugettext('No transition exists from state "{}" to state "{}"').format(request_state, workflow_state.state_id))
+    return _transition_exists
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def has_error(field, errors):
+    return len(errors.get((field,))) > 0
+
+
+def transition_exists(
+        package_id_field='package_id', request_state_field='request_state'
+):
+    def _transition_exists(key, data, errors, context):
+        print(f"request_message_required")
+        package_id = data.get((package_id_field,))
+        request_state = data.get((request_state_field,))
+        workflow_state = WorkflowState.get(package_id)
+        workflow_transition = None
+        if workflow_state:
+            workflow_transition = workflow_constants.WORKFLOW.get_transition(workflow_state.state_id, request_state)
+
+        if workflow_state and not workflow_transition:
+            errors[(request_state_field,)].append(common.ugettext('No transition exists from state "{}" to state "{}"').format(request_state, workflow_state.state_id))
+    return _transition_exists
+
+
+def request_message_required(
+        package_id_field='package_id', request_state_field='request_state', request_message_field='request_message'
+):
+
+    def _request_message_required(key, data, errors, context):
+        print(f"request_message_required")
+        package_id = data.get((package_id_field,))
+        request_state = data.get((request_state_field,))
+        request_message = data.get((request_message_field,))
+
+        workflow_state = WorkflowState.get(package_id)
+        workflow_transition = None
+        if workflow_state:
+            workflow_transition = workflow_constants.WORKFLOW.get_transition(workflow_state.state_id, request_state)
+
+        if workflow_transition and workflow_transition.request_message_required:
+            if request_message is common.missing or not request_message:
+                errors[(request_message_field,)].append(common.ugettext('Please enter both passwords'))
+    return _request_message_required
+
+
+def request_does(key, data, errors, context):
+    session = context["session"]
+    if not has_error('package_id', errors) and not has_error('request_state', errors):
+        filter_kwargs = {
+            'package_id': data.get(('package_id',)),
+            'request_state': data.get(('request_state',)),
+            'process_state': REQUEST_STATE_PENDING
+        }
+        query = session.query(WorkflowRequest).filter_by(**filter_kwargs)
+        if query.first() is not None:
+            raise common.Invalid(common.ugettext('Request id already exists'))
+
+
+def default_current_user(key, data, errors, context):
+    value = data.get(key)
+    if value is common.missing:
+        data[key] = context["user"]
+#
+#
+# def default_current_user(key, data, errors, context):
+#     value = data.get(key)
+#     if value is common.missing:
+#         data[key] = context["user"]
+
+
+def package_has_workflow_state(package_id: str) -> str:
+    """
+        Returns:
+            the given value if a WorkflowRequest identified by the request_id can be found
+        Raises:
+            Invalid if not found
+    """
+    result = WorkflowState.get(package_id)
+    if not result:
+        raise common.Invalid(common.ugettext('Package does not have a WorkflowState'))
+    return package_id
 
 
 def request_id_does_not_exist(request_id: str) -> str:
@@ -22,7 +188,20 @@ def request_id_does_not_exist(request_id: str) -> str:
     """
     result = WorkflowRequest.get(request_id)
     if result:
-        raise toolkit.Invalid(_('Request id already exists'))
+        raise common.Invalid(common.ugettext('Request id already exists'))
+    return request_id
+
+
+def request_id_exists(request_id: str) -> str:
+    """
+        Returns:
+            the given value if a WorkflowRequest identified by the request_id can be found
+        Raises:
+            Invalid if not found
+    """
+    result = WorkflowRequest.get(request_id)
+    if not result:
+        raise common.Invalid(common.ugettext('Request id does not exist'))
     return request_id
 
 
@@ -35,13 +214,13 @@ def organization_id_exists(organization_id: str, context: Dict) -> str:
 
     result = session.query(model.Group).get(organization_id)
     if not result or not result.is_organization:
-        raise toolkit.Invalid('%s: %s' % (_('Not found'), _('Organization')))
+        raise common.Invalid('%s: %s' % (common.ugettext('Not found'), common.ugettext('Organization')))
     return organization_id
 
 
 def state_exists(state):
     if state not in workflow_constants.WORKFLOW.get_states():
-        raise toolkit.Invalid('%s: %s' % (_('Not found'), _('WorkflowState')))
+        raise common.Invalid('%s: %s' % (common.ugettext('Not found'), common.ugettext('WorkflowState')))
     return state
 
 
@@ -54,26 +233,26 @@ def is_function(value: Callable):
         Raises Invalid if the given value is not a function (can't be called)
     """
     if not callable(value) and not hasattr(value, "__call__"):
-        raise toolkit.Invalid(_('Value must be a function'))
+        raise common.Invalid(common.ugettext('Value must be a function'))
     return value
 
 
-def is_function_with_parameters(varnames):
-    """
-        Returns a 
-    """
-
-    '''Raises Invalid if the given value is not a function (can't be called)'''
-
-    def f(value: Callable):
-        value = is_function(value)
-        # noinspection PyUnresolvedReferences
-        func_varnames = set(value.__code__.co_varnames[:value.__code__.co_argcount])
-        if not func_varnames == set(varnames):
-            raise toolkit.Invalid(_('is_function_with_parameters'))
-        return value
-
-    return f
+# def is_function_with_parameters(varnames):
+#     """
+#         Returns a
+#     """
+#
+#     '''Raises Invalid if the given value is not a function (can't be called)'''
+#
+#     def f(value: Callable):
+#         value = is_function(value)
+#         # noinspection PyUnresolvedReferences
+#         func_varnames = set(value.__code__.co_varnames[:value.__code__.co_argcount])
+#         if not func_varnames == set(varnames):
+#             raise toolkit.Invalid(common.ugettext('is_function_with_parameters'))
+#         return value
+#
+#     return f
 
 
 def is_text_function(text_function: Callable[[], str]) -> Callable[[], str]:
@@ -106,9 +285,9 @@ def one_of_validators(list_of_validators):
             try:
                 validator(value)
                 return value
-            except toolkit.Invalid as e:
+            except common.Invalid as e:
                 pass
-        raise toolkit.Invalid(_('Value must be one of {}'.format(list_of_validators)))
+        raise common.Invalid(common.ugettext('Value must be one of {}'.format(list_of_validators)))
 
     return _one_of_validators
 
@@ -134,13 +313,15 @@ def workflow_state_after_validator(key, converted_data, errors, context):
     :return:
     """
 
-    def add_error(key, error):
-        """
+    log.warning("workflow_state_after_validator")
 
-        :param key:
-        :param error:
+    def add_error(field_key, error):
         """
-        errors[(key,)].append(error)
+        Small helper function to add errors to the errors
+        :param field_key: key of the field
+        :param error: error message
+        """
+        errors[(field_key,)].append(error)
 
     if any(errors[key] for key in errors):
         # something is already wrong, so no need to do this check
@@ -165,7 +346,7 @@ def workflow_state_after_validator(key, converted_data, errors, context):
     if owner_org and workflow_helpers.workflow_enabled_for_organization(owner_org):
         if not after_state:
             # workflow state field required
-            add_error(workflow_constants.DEFAULT_FIELD, toolkit._('Missing value'))
+            add_error(workflow_constants.DEFAULT_FIELD, common.ugettext('Missing value'))
         else:
             if before_state != after_state:
                 allowed_states = workflow_constants.WORKFLOW.allowed_states(
@@ -174,7 +355,7 @@ def workflow_state_after_validator(key, converted_data, errors, context):
                 if after_state not in allowed_states:
                     add_error(
                         workflow_constants.DEFAULT_FIELD,
-                        toolkit._('Value must be one of {}'.format(allowed_states))
+                        common.ugettext('Value must be one of {}'.format(allowed_states))
                     )
 
             state = workflow_constants.WORKFLOW.get_state(after_state)
@@ -184,7 +365,7 @@ def workflow_state_after_validator(key, converted_data, errors, context):
                     if converted_data.get((field,)) != field_value:
                         add_error(
                             field,
-                            toolkit._(
+                            common.ugettext(
                                 'The state {state} requires this field to have the value of {value}'.format(
                                     state=after_state, value=field_value
                                 )
@@ -192,33 +373,4 @@ def workflow_state_after_validator(key, converted_data, errors, context):
                         )
     else:
         if after_state:
-            add_error(workflow_constants.DEFAULT_FIELD, toolkit._('Value must be one of {}'.format([None])))
-
-    # if there are no errors
-    if not any(errors[key] for key in errors):
-        # convert the converted_data into a bit easier to use and remove the extras as they are duplicated
-        data_dict = dict(unflatten(converted_data))
-        del data_dict['extras']
-
-        # convert the pkg into a dict and add the extras to make it easier to compare
-        pkg_dict = dict(pkg.as_dict())
-        pkg_dict.update(pkg_dict.pop('extras', {}))
-
-        changed_fields = set()
-        set_keys = set(pkg_dict.keys()).union(set(data_dict.keys()))
-        for key in set_keys:
-            if key in pkg_dict and key not in data_dict:
-                pass
-            elif key not in pkg_dict and key in data_dict:
-                changed_fields.add(key)
-            else:
-                if not pkg_dict.get(key) == data_dict.get(key):
-                    changed_fields.add(key)
-        if workflow_constants.DEFAULT_FIELD in changed_fields:
-            state = workflow_constants.WORKFLOW.get_state(after_state)
-            state_fields = set([workflow_constants.DEFAULT_FIELD])
-            if state.dataset_fields:
-                state_fields.update(set(state.dataset_fields.keys()))
-            if not changed_fields - state_fields:
-                converted_data[('is_workflow_set_state',)] = True
-
+            add_error(workflow_constants.DEFAULT_FIELD, common.ugettext('Value must be one of {}'.format([None])))

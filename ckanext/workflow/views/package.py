@@ -14,7 +14,10 @@ import ckanext.workflow.helpers as helpers
 from ckanext.workflow.views.helpers import get_context
 import ckanext.workflow.constants as workflow_constants
 from plugins import PluginImplementations
-from ckanext.workflow.plugin.interfaces import IWorkflowPackageStateController
+from ckanext.workflow.plugins.interfaces import IWorkflowPackageStateController
+# logging
+import logging
+log = logging.getLogger(__name__)
 
 # noinspection PyProtectedMember
 tk__ = toolkit._
@@ -55,7 +58,7 @@ def change(id, package_type):
     from_state = helpers._get_state(id).label
     try:
         ### do state update
-        result = toolkit.get_action('workflow_set_state')(dict(context, workflow_set_state=True), data_dict)
+        result = toolkit.get_action('workflow_state_update')(dict(context, workflow_set_state=True), data_dict)
         #### finished
 
         to_state = helpers._get_state(result).label
@@ -80,10 +83,8 @@ def request(id, package_type):
 
     # noinspection PyProtectedMember
     data_dict = {
-        "organization_id": pkg_dict.get("owner_org"),
         "package_id": id,
         "state_id": helpers._get_state(id).id,
-        "request_user_id": context["user"],
         "request_state": request.get("state"),
         "request_message": request.get("message", None)
     }
