@@ -5,45 +5,14 @@
 # but at the same time making it easy to change for example the json lib
 # used.
 
-import logging as _logging
-
-getLogger = _logging.getLogger
-
-from ckan import model as _model
-import ckan.lib.plugins as _lib_plugins
-import ckan.plugins as _plugins
-import ckan.logic.auth as _logic_auth
-import ckan.authz as _authz
-
-users_role_for_group_or_org = _authz.users_role_for_group_or_org
-has_user_permission_for_group_or_org = _authz.has_user_permission_for_group_or_org
-user_is_collaborator_on_dataset = _authz.user_is_collaborator_on_dataset
-is_sysadmin = _authz.is_sysadmin
-
-
-DefaultTranslation = _lib_plugins.DefaultTranslation
-SingletonPlugin = _plugins.SingletonPlugin
-implements = _plugins.implements
-PluginImplementations = _plugins.PluginImplementations
-model = _model
-get_package_object = _logic_auth.get_package_object
-ITranslation = _plugins.ITranslation
-IConfigurable = _plugins.IConfigurable
-IConfigurer = _plugins.IConfigurer
-IActions = _plugins.IActions
-IAuthFunctions = _plugins.IAuthFunctions
-ITemplateHelpers = _plugins.ITemplateHelpers
-IBlueprint = _plugins.IBlueprint
-IValidators = _plugins.IValidators
-IFacets = _plugins.IFacets
-IPackageController = _plugins.IPackageController
+from ckan.plugins import toolkit
 
 # full import of all toolkit attributes
 
 # noinspection PyUnresolvedReferences
-config = _toolkit.config
+config = toolkit.config
 # noinspection PyUnresolvedReferences,PyProtectedMember
-ugettext = _toolkit._
+ugettext = toolkit._
 # noinspection PyUnresolvedReferences
 ungettext = toolkit.ungettext
 # noinspection PyUnresolvedReferences
@@ -153,7 +122,6 @@ enqueue_job = toolkit.enqueue_job
 # # noinspection PyUnresolvedReferences
 # load_config = toolkit.load_config
 
-
 # converters/validators
 
 convert_package_name_or_id_to_id = get_converter('convert_package_name_or_id_to_id')
@@ -168,3 +136,7 @@ convert_user_name_or_id_to_id = get_converter("convert_user_name_or_id_to_id")
 not_empty = get_validator("not_empty")
 not_missing = get_converter("not_missing")
 ignore_empty = get_converter("ignore_empty")
+list_of_strings = get_converter("list_of_strings")
+user_id_or_name_exists = get_validator("user_id_or_name_exists")
+group_id_or_name_exists = get_validator("group_id_or_name_exists")
+package_id_or_name_exists = get_validator("package_id_or_name_exists")

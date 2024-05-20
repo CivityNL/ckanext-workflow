@@ -1,6 +1,0 @@
-{% ckan_extends %}
-
-{% block content_primary_nav %}
-  {{ super() }}
-  {{ h.build_nav_icon('workflow_organization.organization_requests', _('Requests'), id=group_dict.name, icon='tasks') }}
-{% endblock %}

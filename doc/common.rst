@@ -1,9 +1,9 @@
 Common
 ===========================
 
-:py:mod:`ckanext.workflow.common` contains a few core classes and functions for plugins
+:py:mod:`ckanext.authorization.common` contains a few core classes and functions for plugins
 to use:
 
-.. automodule:: ckanext.workflow.common
+.. automodule:: ckanext.authorization.common
    :members:
    :undoc-members:
