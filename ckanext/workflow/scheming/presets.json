@@ -1,0 +1,16 @@
+{
+  "scheming_presets_version": 1,
+  "about": "scheming presets for repeating fields",
+  "about_url": "http://github.com/open-data/ckanext-repeating",
+  "presets": [
+    {
+      "preset_name": "workflow_state",
+      "values": {
+        "form_snippet": "select.html",
+        "display_snippet": "select.html",
+        "choices_helper": "workflow_choices_helper",
+        "validators": "scheming_choices"
+      }
+    }
+  ]
+}

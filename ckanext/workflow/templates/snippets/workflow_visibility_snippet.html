@@ -1,0 +1,21 @@
+{#
+Adds a block of custom form fields.
+
+extras - The fields to add.
+errors - A dict of errors for the fields.
+limit  - The total number of fields that should be output.
+Example:
+
+  {% snippet 'snippets/workflow_visibility_snippet.html' %}
+
+#}
+
+{% set visibility_content = _('This dataset will be private until it is approved.') %}
+
+<div class="control-group form-group control-medium">
+  {# TRANSLATORS: This is core translation, remove this from the generate pot file to prevent mishaps #}
+  <label class="control-label">{{ _('Visibility') }}</label>
+  <div class="controls">
+    {{ visibility_content }}
+  </div>
+</div>

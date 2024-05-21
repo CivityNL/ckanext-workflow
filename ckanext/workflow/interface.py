@@ -28,10 +28,6 @@ class IWorkflow(Interface):
     def get_update_actions(self, update_actions):
         return update_actions
 
-    # noinspection PyMethodMayBeStatic
-    def get_roles(self, roles):
-        return roles
-
 
 class IWorkflowRequestController(Interface):
 
