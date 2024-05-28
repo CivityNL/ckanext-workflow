@@ -7,6 +7,6 @@ def get_context():
     return {
         'model': common.model,
         'session': common.model.Session,
-        'user': common.c.user,
-        'auth_user_obj': common.c.userobj
+        'user': common.g.user,
+        'auth_user_obj': common.g.userobj
     }

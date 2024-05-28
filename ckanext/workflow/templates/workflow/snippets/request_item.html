@@ -1,0 +1,49 @@
+{#
+  Renders a single resource with icons and view links.
+
+  res - A resource dict to render
+  pkg - A package dict that the resource belongs to
+  can_edit - Whether the user is allowed to edit the resource
+  url_is_edit - Whether the link to the resource should be to editing it (set to False to make the link view the resource)
+  is_activity_archive - Whether this is an old version of the dataset (and therefore read-only)
+
+  Example:
+
+    {% snippet "package/snippets/resource_item.html", request=request %}
+
+#}
+
+<li class="request-item panel" data-id="{{ request.id }}">
+    {% block request_item_title %}
+        <a class="heading" data-toggle="collapse" href="#request_{{ request.id }}">
+            {{ request.request_message | truncate(50) }}
+            <span class="request-label">
+    {% if request.process_state == 'pending' %}
+        <i class="fa fa-circle fa-2x"></i>
+    {% endif %}
+                {% if request.process_state == 'approved' or request.process_state == 'rejected' %}
+                    <i class="fa fa-check fa-2x"></i>
+                {% endif %}
+                {% if request.process_state == 'deleted' or request.process_state == 'resolved' %}
+                    <i class="fa fa-times fa-2x"></i>
+                {% endif %}
+    </span>
+        </a>
+              <ul id="request_{{ request.id }}" class="collapse panel-collapse">
+                    <li>SubTest1</li>
+                    <li>SubTest1</li>
+                    <li>SubTest1</li>
+                </ul>
+    {% endblock %}
+    {% block request_item_explore %}
+        <div class="dropdown btn-group">
+            <a href="#" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                <i class="fa fa-share"></i>
+                {{ _('Explore') }}
+                <span class="caret"></span>
+            </a>
+        </div>
+    {% endblock %}
+    {#  {% for key in request %}{{ key }}: {{ request[key] }}{% endfor %}#}
+
+</li>

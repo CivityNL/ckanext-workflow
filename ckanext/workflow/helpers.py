@@ -5,9 +5,11 @@
 from typing import List
 
 from ckanext.workflow import utils
+from ckanext.workflow.backend import WorkflowBackend
 import ckanext.workflow.constants as workflow_constants
 from ckan.plugins import toolkit
-from ckanext.workflow.common import model
+from ckanext.workflow.common import model, get_package_object, convert_user_name_or_id_to_id
+from ckanext.workflow.model import WorkflowPackageState, WorkflowPackageRequest
 
 # logging
 import logging
@@ -21,56 +23,37 @@ def show_notice_to_be_unpublished_on_edit(pkg_dict):
 
 
 def get_state_label(pkg_dict):
-    return _get_state(pkg_dict).label
+    state = _get_state(pkg_dict)
+    return state.label if state else None
 
 
 def get_state_id(pkg_dict):
-    return _get_state(pkg_dict).id
+    state = _get_state(pkg_dict)
+    return state.id if state else None
 
 
 def _get_state(pkg):
-    result = workflow_constants.WORKFLOW.get_state(None)
+    package_id = pkg
     if isinstance(pkg, dict):
-        result = _get_state_pkg_dict(pkg)
+        package_id = pkg.get("id")
     elif isinstance(pkg, model.Package):
-        result = _get_state_pkg(pkg)
-    elif pkg is not None:
-        result = _get_state_pkg_id(pkg)
-    return result
-
-
-def _get_state_pkg_id(pkg_id: str):
-    return _get_state_pkg(model.Package.get(pkg_id))
-
-
-def _get_state_pkg_dict(pkg_dict: dict):
-    result = None
-    field = workflow_constants.DEFAULT_FIELD
-    if field in pkg_dict:
-        result = pkg_dict.get(field)
-    elif 'extras' in pkg_dict:
-        extra = next((extra for extra in pkg_dict.get("extras") if extra.get("key") == field), {})
-        result = extra.get("value", None)
-    return workflow_constants.WORKFLOW.get_state(result)
-
-
-def _get_state_pkg(pkg: model.Package):
-    if pkg is None:
-        return None
-    field = workflow_constants.DEFAULT_FIELD
-    result = pkg.extras.get(field, None) if pkg.extras else None
-    return workflow_constants.WORKFLOW.get_state(result)
+        package_id = pkg.id
+    else:
+        package_id = convert_package_name_or_id_to_id(pkg, {'session': model.Session})
+    state = WorkflowPackageState.get(package_id)
+    return WorkflowBackend.get_state(state.state_id if state else None)
 
 
 def get_allowed_states(pkg_dict):
     context = utils.get_context()
     pkg_id = pkg_dict.get("id", None)
     state = _get_state(pkg_id)
-    user_id = context.get("user", None)
+    user_id = convert_user_name_or_id_to_id(context.get("user", None), context)
     org_id = pkg_dict.get("owner_org", None)
     result = {"request": [], "approve": [], "assign": []}
     for action in result:
-        result[action] = workflow_constants.WORKFLOW.allowed_states(context, state.id, user_id, pkg_id, org_id, action)
+        result[action] = WorkflowBackend.allowed_states(context, state.id if state else None, user_id, pkg_id, org_id,
+                                                        action)
     return result
 
 
@@ -114,25 +97,24 @@ def workflow_choices_helper(field: dict) -> List[dict[str, str]]:
     if pkg is None:
         result = [
             {
-                "value": workflow_constants.WORKFLOW.default_state.id,
-                "label": workflow_constants.WORKFLOW.default_state.id
+                "value": WorkflowBackend.default_state.id,
+                "label": WorkflowBackend.default_state.id
             }
         ]
     else:
-        state = _get_state_pkg(pkg)
+        state = _get_state(pkg)
         if state is None:
-            state = workflow_constants.WORKFLOW.default_state
+            state = WorkflowBackend.default_state
 
-        allowed_states = [state.id] + workflow_constants.WORKFLOW.allowed_states(context, state.id, user.id, pkg.id, pkg.owner_org, "assign")
+        allowed_states = [state.id] + WorkflowBackend.allowed_states(context, state.id, user.id, pkg.id, pkg.owner_org, "assign")
         result = [{"value": state, "label": state} for state in allowed_states]
 
     return result
 
 
 def workflow_enabled_for_organization(organization):
-    """
-
-    :param organization:
-    :return:
-    """
     return True
+
+
+def package_request_count(package_id):
+    return WorkflowPackageRequest.count_for_package(package_id)

@@ -1,5 +1,7 @@
 from typing import Dict, Callable
-from ckanext.workflow.model import WorkflowRequest, WorkflowState
+
+from ckanext.workflow.backend import WorkflowBackend
+from ckanext.workflow.model import WorkflowPackageRequest, WorkflowPackageState
 from ckanext.workflow.model.workflow_request import REQUEST_STATE_PENDING, REQUEST_STATE_APPROVED, REQUEST_STATE_REJECTED
 import ckanext.workflow.common as common
 import ckanext.workflow.helpers as workflow_helpers
@@ -32,10 +34,10 @@ def process_message_required(
         if has_errors(fields, errors):
             return
         package_id, request_state, process_state, process_message = get_values(fields, data)
-        workflow_state = WorkflowState.get(package_id)
-        workflow_transition = workflow_constants.WORKFLOW.get_transition(workflow_state.state_id, request_state)
+        workflow_state = WorkflowPackageState.get(package_id)
+        workflow_transition = WorkflowBackend.get_transition(workflow_state.state_id, request_state)
 
-        if not process_message and process_state in WorkflowRequest.states(handled=True):
+        if not process_message and process_state in WorkflowPackageRequest.states(handled=True):
             if process_state == REQUEST_STATE_APPROVED and workflow_transition.approve_message_required:
                 errors[(process_message_field,)].append(
                     common.ugettext('Process state "{}" requires a process_message').format(process_state)
@@ -57,8 +59,8 @@ def process_user_id_required(
         process_state = data.get((process_state_field,))
         process_user_id = data.get((process_user_id_field,))
         # check if the current process_state makes sense
-        if process_state is not common.missing and process_state and process_state in WorkflowRequest.states():
-            if process_state not in WorkflowRequest.states(open=True):
+        if process_state is not common.missing and process_state and process_state in WorkflowPackageRequest.states():
+            if process_state not in WorkflowPackageRequest.states(open=True):
                 if process_user_id is common.missing or not process_user_id:
                     errors[(process_user_id_field,)].append(
                         common.ugettext('Process state "{}" requires a process_user_id').format(process_state))
@@ -73,10 +75,10 @@ def transition_exists(
         print(f"request_message_required")
         package_id = data.get((package_id_field,))
         request_state = data.get((request_state_field,))
-        workflow_state = WorkflowState.get(package_id)
+        workflow_state = WorkflowPackageState.get(package_id)
         workflow_transition = None
         if workflow_state:
-            workflow_transition = workflow_constants.WORKFLOW.get_transition(workflow_state.state_id, request_state)
+            workflow_transition = WorkflowBackend.get_transition(workflow_state.state_id, request_state)
 
         if workflow_state and not workflow_transition:
             errors[(request_state_field,)].append(common.ugettext('No transition exists from state "{}" to state "{}"').format(request_state, workflow_state.state_id))
@@ -110,10 +112,10 @@ def transition_exists(
         print(f"request_message_required")
         package_id = data.get((package_id_field,))
         request_state = data.get((request_state_field,))
-        workflow_state = WorkflowState.get(package_id)
+        workflow_state = WorkflowPackageState.get(package_id)
         workflow_transition = None
         if workflow_state:
-            workflow_transition = workflow_constants.WORKFLOW.get_transition(workflow_state.state_id, request_state)
+            workflow_transition = WorkflowBackend.get_transition(workflow_state.state_id, request_state)
 
         if workflow_state and not workflow_transition:
             errors[(request_state_field,)].append(common.ugettext('No transition exists from state "{}" to state "{}"').format(request_state, workflow_state.state_id))
@@ -130,14 +132,14 @@ def request_message_required(
         request_state = data.get((request_state_field,))
         request_message = data.get((request_message_field,))
 
-        workflow_state = WorkflowState.get(package_id)
+        workflow_state = WorkflowPackageState.get(package_id)
         workflow_transition = None
         if workflow_state:
-            workflow_transition = workflow_constants.WORKFLOW.get_transition(workflow_state.state_id, request_state)
+            workflow_transition = WorkflowBackend.get_transition(workflow_state.state_id, request_state)
 
         if workflow_transition and workflow_transition.request_message_required:
             if request_message is common.missing or not request_message:
-                errors[(request_message_field,)].append(common.ugettext('Please enter both passwords'))
+                errors[(request_message_field,)].append(common.ugettext('_request_message_required'))
     return _request_message_required
 
 
@@ -149,9 +151,9 @@ def request_does(key, data, errors, context):
             'request_state': data.get(('request_state',)),
             'process_state': REQUEST_STATE_PENDING
         }
-        query = session.query(WorkflowRequest).filter_by(**filter_kwargs)
+        query = session.query(WorkflowPackageRequest).filter_by(**filter_kwargs)
         if query.first() is not None:
-            raise common.Invalid(common.ugettext('Request id already exists'))
+            raise common.Invalid(common.ugettext('request_does :: Request id already exists'))
 
 
 def default_current_user(key, data, errors, context):
@@ -169,24 +171,24 @@ def default_current_user(key, data, errors, context):
 def package_has_workflow_state(package_id: str) -> str:
     """
         Returns:
-            the given value if a WorkflowRequest identified by the request_id can be found
+            the given value if a WorkflowPackageRequest identified by the request_id can be found
         Raises:
             Invalid if not found
     """
-    result = WorkflowState.get(package_id)
+    result = WorkflowPackageState.get(package_id)
     if not result:
-        raise common.Invalid(common.ugettext('Package does not have a WorkflowState'))
+        raise common.Invalid(common.ugettext('Package does not have a WorkflowPackageState'))
     return package_id
 
 
 def request_id_does_not_exist(request_id: str) -> str:
     """
         Returns:
-            the given value if a WorkflowRequest identified by the request_id can be found
+            the given value if a WorkflowPackageRequest identified by the request_id can be found
         Raises:
             Invalid if not found
     """
-    result = WorkflowRequest.get(request_id)
+    result = WorkflowPackageRequest.get(request_id)
     if result:
         raise common.Invalid(common.ugettext('Request id already exists'))
     return request_id
@@ -195,11 +197,11 @@ def request_id_does_not_exist(request_id: str) -> str:
 def request_id_exists(request_id: str) -> str:
     """
         Returns:
-            the given value if a WorkflowRequest identified by the request_id can be found
+            the given value if a WorkflowPackageRequest identified by the request_id can be found
         Raises:
             Invalid if not found
     """
-    result = WorkflowRequest.get(request_id)
+    result = WorkflowPackageRequest.get(request_id)
     if not result:
         raise common.Invalid(common.ugettext('Request id does not exist'))
     return request_id
@@ -219,8 +221,8 @@ def organization_id_exists(organization_id: str, context: Dict) -> str:
 
 
 def state_exists(state):
-    if state not in workflow_constants.WORKFLOW.get_states():
-        raise common.Invalid('%s: %s' % (common.ugettext('Not found'), common.ugettext('WorkflowState')))
+    if state not in WorkflowBackend.get_states():
+        raise common.Invalid('%s: %s' % (common.ugettext('Not found'), common.ugettext('WorkflowPackageState')))
     return state
 
 
@@ -333,7 +335,7 @@ def workflow_state_after_validator(key, converted_data, errors, context):
         # let's assume we started with the default
         before_state = workflow_constants.DEFAULT_STATE.id
     else:
-        before_state = workflow_helpers._get_state_pkg(pkg).id
+        before_state = workflow_helpers._get_state(pkg).id
 
     # let's see if we can deal with the rest now
     user_id = context['auth_user_obj'].id

@@ -1,9 +1,10 @@
 {% ckan_extends %}
 
 {% block package_description %}
+    WORKFLOW
   {% if h.workflow_get_state_label(pkg_dict) %}
   <span class="label label-inverse pull-right" style="text-transform: uppercase; margin-left: 10px; margin-right: 10px">
-    {{ h.workflow_get_state_label(pkg_dict) }}
+    WORKFLOW {{ h.workflow_get_state_label(pkg_dict) }}
   </span>
   {% endif %}
   {{ super() }}

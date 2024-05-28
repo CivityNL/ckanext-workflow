@@ -29,15 +29,37 @@
     </a>
     <ul class="dropdown-menu">
       {% for state in states  %}
-        <li><a><button type="submit" name="state" value="{{ state }}" class="btn btn-link" style="all: inherit; padding: 0; width: 100%">{{ state }}</button></a></li>
-        <li><a href="{{ h.url_for(named_route, id=pkg.id, package_type=pkg.type, state=state ) }}" data-module="confirm-action" data-module-content="{{ _('Are you sure you want to purge everything?') }}">{{ state }} confirm-action</a></li>
-        <!-- <li><a type="submit" name="action" value="{{ state }}">{{ state }}</a></li> -->
+        <li><a><button type="submit" name="state_id" value="{{ state }}" class="btn btn-link" style="all: inherit; padding: 0; width: 100%">{{ state }} - button</button></a></li>
+        <li><a><button type="button" data-toggle="modal" data-target="#stateModal{{ action }}{{ state }}" data-bs-toggle="modal" data-bs-target="#stateModal{{ action }}{{ state }}" class="btn btn-link" style="all: inherit; padding: 0; width: 100%">{{ state }} - modal</button></a></li>
       {% endfor %}
     </ul>
   </div>
   {% elif states | length == 1 %}
     {% set state = states[0] %}
-    <button class="btn btn-primary" type="submit" name="state" value="{{ state }}">{{ title }}{{ state }}</button>
+    <button class="btn btn-primary" type="submit" name="state_id" value="{{ state }}">{{ title }}{{ state }}</button>
   {% endif %}
 </form>  
 {% endif %}
+{% for state in states  %}
+<div class="modal fade" id="stateModal{{ action }}{{ state }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    <form method="POST" action="{{ url }}" style="display: inline">
+      <div class="modal-body">
+        {{ form.markdown('notes', id='field-notes', label=_('Description'), placeholder=_('eg. Some useful notes about the data')) }}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary" name="state_id" value="{{ state }}">Save changes</button>
+      </div>
+    </form>
+    </div>
+  </div>
+</div>
+{% endfor %}

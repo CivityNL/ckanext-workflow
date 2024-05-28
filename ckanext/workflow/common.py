@@ -6,7 +6,7 @@
 # used.
 
 import logging as _logging
-
+import flask as _flask
 getLogger = _logging.getLogger
 
 from ckan import model as _model
@@ -21,6 +21,7 @@ has_user_permission_for_group_or_org = _authz.has_user_permission_for_group_or_o
 user_is_collaborator_on_dataset = _authz.user_is_collaborator_on_dataset
 is_sysadmin = _authz.is_sysadmin
 
+Blueprint = _flask.Blueprint
 
 DefaultTranslation = _lib_plugins.DefaultTranslation
 SingletonPlugin = _plugins.SingletonPlugin

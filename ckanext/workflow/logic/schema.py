@@ -36,7 +36,7 @@ def workflow_request_list_schema():
 @ignore_extras
 def workflow_request_create_schema():
     """
-    This schema is used when trying to create a :class:`ckanext.workflow.model.WorkflowRequest` object.
+    This schema is used when trying to create a :class:`ckanext.workflow.model.WorkflowPackageRequest` object.
 
     :return:
     """

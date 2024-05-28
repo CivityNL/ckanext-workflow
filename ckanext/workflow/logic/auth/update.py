@@ -1,4 +1,4 @@
-from ckanext.workflow.interface import IWorkflowRequestController
+from ckanext.workflow.interface import IWorkflowPackageRequestController
 from ckan.plugins import toolkit, PluginImplementations
 import ckanext.workflow.helpers as helpers
 import ckanext.workflow.constants as workflow_constants

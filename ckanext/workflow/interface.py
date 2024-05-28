@@ -7,6 +7,7 @@ from ckan.plugins.interfaces import Interface
 
 # logging
 import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -29,39 +30,25 @@ class IWorkflow(Interface):
         return update_actions
 
 
-class IWorkflowRequestController(Interface):
+class IWorkflowPackageRequestController(Interface):
 
     ####
-    def before_request_create(self, context, request_dict):
-        pass
-
     def after_request_create(self, context, request_dict):
         pass
 
-    def before_request_update(self, context, request_dict):
-        pass
-
     def after_request_update(self, context, request_dict):
-        pass    
-
-    def before_request_delete(self, context, request_dict):
         pass
 
     def after_request_delete(self, context, request_dict):
-        pass  
-
-    def before_request_purge(self, context, request_dict):
         pass
 
     def after_request_purge(self, context, request_dict):
-        pass  
+        pass
 
 
 class IWorkflowPackageStateController(Interface):
 
     ####
-    def before_package_state_update(self, context, pkg_dict):
-        pass
 
     def after_package_state_update(self, context, pkg_dict):
-        pass    
+        pass

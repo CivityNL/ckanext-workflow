@@ -8,47 +8,39 @@ items (not necessarily numbers) to counts, and defines operations such as
 Shannon entropy and frequency normalization.
 """
 
-from flask import Blueprint
-from ckan.plugins import toolkit
 from ckanext.workflow.views.helpers import get_context
-# logging
-import logging
-log = logging.getLogger(__name__)
-
-# noinspection PyProtectedMember
-tk__ = toolkit._
-tk_request = toolkit.request
-tk_get_action = toolkit.get_action
-tk_abort = toolkit.abort
-tk_ObjectNotFound = toolkit.ObjectNotFound
-tk_NotAuthorized = toolkit.NotAuthorized
-tk_h = toolkit.h
-tk_redirect_to = toolkit.redirect_to
+import ckanext.workflow.common as common
+log = common.getLogger(__name__)
 
 
 def load_organization(group_id):
-    context = get_context()
-    extra_vars = {}
-
+    context = {
+        'model': common.model,
+        'session': common.model.Session,
+        'user': common.g.user,
+        'auth_user_obj': common.g.userobj
+    }
     try:
         extra_vars = {
-            'group_dict': tk_get_action('organization_show')(context, {'id': group_id}),
+            'group_dict': common.get_action('organization_show')(context, {'id': group_id}),
             'group_type': 'organization'
         }
-    except toolkit.ObjectNotFound:
-        return toolkit.abort(404, tk__('Organization not found'))
-    except toolkit.NotAuthorized:
-        return toolkit.abort(403, tk__('Unauthorized to read organization %s') % group_id)
+    except common.ObjectNotFound:
+        return common.abort(404, common.ugettext('Organization not found'))
+    except common.NotAuthorized:
+        return common.abort(403, common.ugettext('Unauthorized to read organization %s') % group_id)
     for extra_var in extra_vars:
-        setattr(toolkit.g, extra_var, extra_vars.get(extra_var))
+        setattr(common.g, extra_var, extra_vars.get(extra_var))
     return extra_vars
 
 
 def organization_requests(id, group_type, is_organization):
-    return toolkit.render('organization/workflow.html', extra_vars=load_organization(id))
+    extra_vars = load_organization(id)
+    extra_vars['requests'] = common.get_action("workflow_request_list")(get_context(), {'organization_id': id})
+    return common.render('organization/workflow.html', extra_vars=extra_vars)
 
 
-workflow_organization = Blueprint(
+workflow_organization = common.Blueprint(
     u"workflow_organization",
     __name__,
     url_prefix=u'/organization/<id>/workflow',

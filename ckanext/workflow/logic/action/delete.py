@@ -1,6 +1,6 @@
 '''API functions for deleting data from CKAN.'''
-from ckanext.workflow.model import WorkflowRequest
-from ckanext.workflow.interface import IWorkflowRequestController
+from ckanext.workflow.model import WorkflowPackageRequest
+from ckanext.workflow.interface import IWorkflowPackageRequestController
 from ckan.plugins import PluginImplementations, toolkit
 import ckanext.workflow.logic.schema as workflow_schema
 # logging
@@ -26,18 +26,16 @@ def workflow_request_delete(context, data_dict):
     if errors:
         raise toolkit.ValidationError(errors)
 
-    request_id = toolkit.get_or_bust(data_dict, 'id')
-    # get the existing WorkflowState (if exists)
-    workflow_request = WorkflowRequest.get(request_id)
-
-    context["workflow_request"] = workflow_request
-
     # check if the user is allowed to do this action
     toolkit.check_access('workflow_request_delete', context, data_dict)
 
+    request_id = toolkit.get_or_bust(data_dict, 'id')
+    # get the existing WorkflowPackageState (if exists)
+    workflow_request = WorkflowPackageRequest.get(request_id)
+
     session.delete(workflow_request)
 
-    for plugin in PluginImplementations(IWorkflowRequestController):
+    for plugin in PluginImplementations(IWorkflowPackageRequestController):
         plugin.after_request_delete(context, data_dict)
 
     request_activity = model.Activity(

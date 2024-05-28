@@ -1,8 +1,6 @@
 '''API functions for creating data from CKAN.'''
-from ckanext.workflow.model.workflow_request import REQUEST_STATE_PENDING
-from ckanext.workflow.interface import IWorkflowRequestController
-from ckan.plugins import toolkit, PluginImplementations
-from ckanext.workflow.model import WorkflowRequest, WorkflowState
+from ckanext.workflow.interface import IWorkflowPackageRequestController
+from ckanext.workflow.model import WorkflowPackageRequest
 import ckanext.workflow.logic.schema as workflow_schema
 import ckanext.workflow.common as common
 
@@ -28,19 +26,15 @@ def workflow_request_create(context, data_dict):
     common.check_access('workflow_request_create', context, data_dict)
 
     # check if all the information given is valid
-    print("before validate")
     data_dict, errors = common.navl_validate(data_dict, workflow_schema.workflow_request_create_schema(), context)
-    print("after validate")
-    print(f"data_dict = {data_dict}")
-    print(f"errors = {errors}")
     if errors:
         raise common.ValidationError(errors)
 
-    request = WorkflowRequest(**data_dict)
+    request = WorkflowPackageRequest(**data_dict)
     session.add(request)
     session.flush()
 
-    for plugin in PluginImplementations(IWorkflowRequestController):
+    for plugin in common.PluginImplementations(IWorkflowPackageRequestController):
         plugin.after_request_create(context, data_dict)
 
     # Create activity

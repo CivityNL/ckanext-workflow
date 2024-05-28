@@ -1,5 +1,5 @@
 '''API functions for getting data from CKAN.'''
-from ckanext.workflow.model import WorkflowRequest
+from ckanext.workflow.model import WorkflowPackageRequest
 from ckan.plugins import toolkit
 
 side_effect_free = toolkit.side_effect_free

@@ -1,7 +1,6 @@
 from typing import Dict, Callable
-from ckanext.workflow.model import WorkflowRequest
+from ckanext.workflow.model import WorkflowPackageRequest
 from ckan.plugins import toolkit
-import ckanext.workflow.constants as workflow_constants
 # logging
 import logging
 
@@ -17,11 +16,11 @@ one_of = toolkit.get_validator("one_of")
 def request_id_does_not_exist(request_id: str) -> str:
     """
         Returns:
-            the given value if a WorkflowRequest identified by the request_id can be found
+            the given value if a WorkflowPackageRequest identified by the request_id can be found
         Raises:
             Invalid if not found
     """
-    result = WorkflowRequest.get(request_id)
+    result = WorkflowPackageRequest.get(request_id)
     if result:
         raise toolkit.Invalid(_('Request id already exists'))
     return request_id
@@ -39,12 +38,6 @@ def organization_id_exists(organization_id: str, context: Dict) -> str:
     if not result or not result.is_organization:
         raise toolkit.Invalid('%s: %s' % (_('Not found'), _('Organization')))
     return organization_id
-
-
-def state_exists(state):
-    if state not in workflow_constants.WORKFLOW.get_states():
-        raise toolkit.Invalid('%s: %s' % (_('Not found'), _('WorkflowState')))
-    return state
 
 
 def request_approval_validator(key, converted_data, errors, context):

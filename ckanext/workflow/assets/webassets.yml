@@ -1,0 +1,4 @@
+workflow_css:
+  output: ckanext-workflow/%(version)s_workflow_css.css
+  contents:
+    - workflow.css

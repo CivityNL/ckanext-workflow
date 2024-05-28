@@ -6,7 +6,8 @@ from __future__ import print_function
 import sqlalchemy.orm as orm
 import sqlalchemy.types as types
 from ckan.model import meta, User, DomainObject
-from ckanext.workflow.model.workflow_state import WorkflowState
+import ckan.model as model
+from ckanext.workflow.model.workflow_state import WorkflowPackageState
 import ckan.model.types as _types
 import datetime
 
@@ -34,7 +35,7 @@ REQUEST_IGNORED_STATES = [REQUEST_STATE_DELETED, REQUEST_STATE_RESOLVED]
 REQUEST_STATES = REQUEST_OPEN_STATES + REQUEST_HANDLED_STATES + REQUEST_IGNORED_STATES
 
 
-class WorkflowRequest(DomainObject):
+class WorkflowPackageRequest(DomainObject):
 
     # list of all the columns to make them recognized by the IDE
     id = None
@@ -76,7 +77,7 @@ class WorkflowRequest(DomainObject):
 
 
     def __init__(self, package_id, request_user_id, request_state, **kwargs):
-        super(WorkflowRequest, self).__init__(**kwargs)
+        super(WorkflowPackageRequest, self).__init__(**kwargs)
         self.id = _types.make_uuid()
         self.package_id = package_id
         self.request_user_id = request_user_id
@@ -84,27 +85,48 @@ class WorkflowRequest(DomainObject):
 
     @classmethod
     def all(cls):
-        return meta.Session.query(cls).all()
+        return model.Session.query(cls).all()
 
     @classmethod
     def get(cls, id):
-        return meta.Session.query(cls).filter(cls.id == id).one_or_none()
+        return model.Session.query(cls).filter(cls.id == id).one_or_none()
+
+
+    @classmethod
+    def query_for_package(cls, package_id):
+        query = model.Session.query(cls)
+        query = query.filter_by(package_id=package_id)
+        return query
 
     @classmethod
     def get_for_package(cls, package_id):
-        query = meta.Session.query(cls)
-        query = query.filter(cls.state.package.has(id=package_id))
-        return query.all()
+        return cls.query_for_package(package_id).all()
+
+    @classmethod
+    def count_for_package(cls, package_id):
+        return cls.query_for_package(package_id).count()
 
     @classmethod
     def get_for_organization(cls, owner_org):
-        query = meta.Session.query(cls)
+        query = model.Session.query(cls)
         query = query.filter(cls.state.package.has(owner_org=owner_org))
         return query.all()
 
+    def set_process(self, process_state, process_user_id, process_message=None, process_timestamp=None):
+        self.process_state = process_state
+        self.process_user_id = process_user_id
+        self.process_timestamp = datetime.datetime.utcnow() if process_timestamp is None else process_timestamp
+        self.process_message = process_message
+
+    def set_resolved(self, user_id, process_message=None):
+        self.set_process(REQUEST_STATE_RESOLVED, user_id, process_message)
+
+    def set_deleted(self, user_id, process_message=None):
+        self.set_process(REQUEST_STATE_DELETED, user_id, process_message)
+
     @classmethod
     def get_for_user(cls, user_id, open, closed, approved, as_requester, as_approver):
-        query = meta.Session.query(cls)
+        query = model.Session.query(cls)
         if as_requester:
             query = query.filter(cls.requester_id == user_id)
         if as_approver:
@@ -130,14 +152,14 @@ class WorkflowRequest(DomainObject):
         return result
 
 
-def define_workflow_request_table():
+def define_workflow_package_request_table():
 
-    workflow_request_table = Table(
-        'workflow_request', meta.metadata,
+    workflow_package_request_table = Table(
+        'workflow_package_request', meta.metadata,
         # generic identifier
         Column('id', types.UnicodeText, primary_key=True, default=_types.make_uuid),
         # Requester information
-        Column('package_id', types.UnicodeText, ForeignKey('workflow_state.package_id', ondelete="CASCADE"), nullable=False),
+        Column('package_id', types.UnicodeText, ForeignKey('workflow_package_state.package_id', ondelete="CASCADE"), nullable=False),
         Column('request_user_id', types.UnicodeText, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
         Column('request_state', types.UnicodeText, nullable=False),
         # Additional request information
@@ -151,23 +173,23 @@ def define_workflow_request_table():
         Column('process_state', types.UnicodeText, default=REQUEST_STATE_PENDING, nullable=True)
     )
     Index(
-        'workflow_request_only_one_active_request',
-        workflow_request_table.c.package_id,
-        workflow_request_table.c.request_state,
-        workflow_request_table.c.process_state,
+        'workflow_package_request_only_one_active_request',
+        workflow_package_request_table.c.package_id,
+        workflow_package_request_table.c.request_state,
+        workflow_package_request_table.c.process_state,
         unique=True,
-        postgresql_where=workflow_request_table.c.process_state == REQUEST_STATE_PENDING
+        postgresql_where=workflow_package_request_table.c.process_state == REQUEST_STATE_PENDING
     )
-    mapper(WorkflowRequest, workflow_request_table,
+    mapper(WorkflowPackageRequest, workflow_package_request_table,
            properties={
                'state': orm.relationship(
-                   WorkflowState, uselist=False,
+                   WorkflowPackageState, uselist=False,
                    backref=orm.backref(
-                       'requests',
+                       '_requests',
                        cascade='all, delete, delete-orphan'
                    )
                ),
-               'requester': orm.relationship(User, primaryjoin=workflow_request_table.c.request_user_id == User.id,
+               'requester': orm.relationship(User, primaryjoin=workflow_package_request_table.c.request_user_id == User.id,
                                              uselist=False),
            }, )
-    return workflow_request_table
+    return workflow_package_request_table

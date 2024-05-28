@@ -1,14 +1,11 @@
 '''API functions for creating data from CKAN.'''
 
-from ckanext.workflow.interface import IWorkflowRequestController
+from ckanext.workflow.interface import IWorkflowPackageRequestController
 from ckan.plugins import toolkit, PluginImplementations
-from ckanext.workflow.model import WorkflowRequest, WorkflowState
-import ckanext.workflow.constants as workflow_constants
+from ckanext.workflow.model import WorkflowPackageRequest, WorkflowPackageState
 import ckanext.workflow.logic.schema as workflow_schema
 import ckanext.workflow.common as common
-# logging
-import logging
-log = logging.getLogger(__name__)
+log = common.getLogger(__name__)
 
 
 def workflow_request_create(context, data_dict):
@@ -22,7 +19,7 @@ def workflow_request_create(context, data_dict):
         raise common.ValidationError(errors)
 
     package_id, request_user_id, request_state = common.get_or_bust(data_dict, request_fields)
-    workflow_state = WorkflowState.get(package_id)
+    workflow_state = WorkflowPackageState.get(package_id)
     owner_org = workflow_state.package.owner_org
     state_id = workflow_state.state_id
 

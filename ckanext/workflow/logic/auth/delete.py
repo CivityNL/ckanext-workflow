@@ -1,6 +1,6 @@
 '''API functions for deleting data from CKAN.'''
 
-from ckanext.workflow.interface import IWorkflowRequestController
+from ckanext.workflow.interface import IWorkflowPackageRequestController
 from ckan.plugins import PluginImplementations
 # logging
 import logging
