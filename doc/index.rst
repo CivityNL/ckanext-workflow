@@ -11,9 +11,12 @@ Welcome to ckanext-workflow's documentation!
    :caption: Contents:
 
    plugin
-   logic
-   common
-
+   actions
+   helpers
+   validators
+   schemas
+   interfaces
+   backend
 
 
 Indices and tables

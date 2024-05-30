@@ -57,7 +57,10 @@ class WorkflowState(_WorkflowObject):
 
         print(f"state_after_update_action(update_action={update_action}, user_id={user_id}, pkg_id={pkg_id})")
 
-        update_actions = {ua.get('permission'): ua.get('to_state', None) for ua in self.update_actions if ua.get('action') == update_action}
+        update_actions = {
+            ua.get('permission'): ua.get('to_state', None)
+            for ua in self.update_actions if ua.get('action') == update_action
+        }
 
         result = None
         for permission in update_actions:
@@ -68,9 +71,6 @@ class WorkflowState(_WorkflowObject):
             result = self.id
         print(f"state_after_update_action -> {result}")
         return result
-
-    def update_allowed(self, context, user_id, pkg_id, org_id):
-        return self._check_allowed(context, self.can_update, user_id, pkg_id, org_id)
 
     def validate(self, pkg_dict):
         pkg_fields = {f: pkg_dict.get(f) for f in pkg_dict if f != 'extras'}
@@ -92,25 +92,28 @@ class WorkflowState(_WorkflowObject):
                     )]
         return errors
 
-    def _check_allowed(self, context, checks, user_id, pkg_id, org_id):
-        # print(f"WorkflowState._check_allowed for checks={checks}, user_id={user_id}, pkg_id={pkg_id}, org_id={org_id}")
-        result = is_sysadmin(user_id)
-        for check in checks:
-            if result:
-                break
-            if is_function(check):
-                result = check(context=context, pkg_dict=None)
-            elif check in workflow_constants.CAPACITIES:
-                result = users_role_for_group_or_org(org_id, user_id) == check
-                if not result:
-                    result = user_is_collaborator_on_dataset(user_id, pkg_id, check)
-            elif check in workflow_constants.PERMISSIONS:
-                result = has_user_permission_for_group_or_org(org_id, user_id,
-                                                              check.split(workflow_constants.PERMISSION_PREFIX, 1)[1])
-        return result
-
 
 class WorkflowTransition(_WorkflowObject):
+    """
+    A class to represent a person.
+
+    ...
+
+    Attributes
+    ----------
+    name : str
+        first name of the person
+    surname : str
+        family name of the person
+    age : int
+        age of the person
+
+    Methods
+    -------
+    info(additional=""):
+        Prints the person's name and age.
+    """
+
     from_state = None
     to_state = None
     can_request = []
@@ -153,4 +156,4 @@ class WorkflowTransition(_WorkflowObject):
 
     @property
     def id(self):
-        return (self.from_state, self.to_state)
+        return self.from_state, self.to_state

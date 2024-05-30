@@ -18,7 +18,7 @@ import ckan.authz as _authz
 
 users_role_for_group_or_org = _authz.users_role_for_group_or_org
 has_user_permission_for_group_or_org = _authz.has_user_permission_for_group_or_org
-user_is_collaborator_on_dataset = _authz.user_is_collaborator_on_dataset
+# user_is_collaborator_on_dataset = _authz.user_is_collaborator_on_dataset
 is_sysadmin = _authz.is_sysadmin
 
 Blueprint = _flask.Blueprint

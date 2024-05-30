@@ -40,10 +40,11 @@ def change(id, package_type):
     """
     context = get_context()
     data_dict = dict(common.request.values.to_dict(), package_id=id)
-    from_state = helpers._get_state(id).label
+    state = helpers._get_state(id)
+    from_state = state.label if state else None
     try:
         ### do state update
-        common.get_action('workflow_state_update')(dict(context, workflow_set_state=True), data_dict)
+        common.get_action('workflow_dataset_state_update')(dict(context, workflow_set_state=True), data_dict)
         #### finished
         to_state = helpers._get_state(id).label
         common.h.flash_success(common.ugettext('Successfully updated the state from {from_state} to {to_state}.').format(from_state=from_state, to_state=to_state))
@@ -78,7 +79,7 @@ def request(id, package_type):
     # noinspection PyProtectedMember
     from_state = helpers._get_state(id).label
     try:
-        pkg_dict = common.get_action("workflow_request_create")(context, data_dict)
+        pkg_dict = common.get_action("workflow_dataset_request_create")(context, data_dict)
         # noinspection PyProtectedMember
         to_state = helpers._get_state(pkg_dict).label
         common.h.flash_success(
@@ -94,7 +95,7 @@ def request(id, package_type):
 
 def package_requests(id, package_type):
     extra_vars = load_package(id)
-    extra_vars['requests'] = common.get_action("workflow_request_list")(get_context(), {'package_id': id})
+    extra_vars['requests'] = common.get_action("workflow_dataset_request_list")(get_context(), {'package_id': id})
     return common.render('package/workflow.html', extra_vars=extra_vars)
 
 

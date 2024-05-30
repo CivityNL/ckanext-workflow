@@ -7,7 +7,7 @@ import sqlalchemy.orm as orm
 import sqlalchemy.types as types
 from ckan.model import meta, User, DomainObject
 import ckan.model as model
-from ckanext.workflow.model.workflow_state import WorkflowPackageState
+from ckanext.workflow.model.workflow_package_state import WorkflowPackageState
 import ckan.model.types as _types
 import datetime
 
@@ -36,7 +36,6 @@ REQUEST_STATES = REQUEST_OPEN_STATES + REQUEST_HANDLED_STATES + REQUEST_IGNORED_
 
 
 class WorkflowPackageRequest(DomainObject):
-
     # list of all the columns to make them recognized by the IDE
     id = None
     package_id = None
@@ -48,10 +47,19 @@ class WorkflowPackageRequest(DomainObject):
     process_message = None
     process_timestamp = None
     process_state = None
+    modified_timestamp = None
 
     # list of all the relationships
-    state = None
-    requester = None
+    _state = None
+    _requester = None
+
+    @property
+    def state(self):
+        return self._state
+
+    @property
+    def requester(self):
+        return self._requester
 
     @property
     def package(self):
@@ -75,7 +83,6 @@ class WorkflowPackageRequest(DomainObject):
 
         return result
 
-
     def __init__(self, package_id, request_user_id, request_state, **kwargs):
         super(WorkflowPackageRequest, self).__init__(**kwargs)
         self.id = _types.make_uuid()
@@ -90,7 +97,6 @@ class WorkflowPackageRequest(DomainObject):
     @classmethod
     def get(cls, id):
         return model.Session.query(cls).filter(cls.id == id).one_or_none()
-
 
     @classmethod
     def query_for_package(cls, package_id):
@@ -124,6 +130,51 @@ class WorkflowPackageRequest(DomainObject):
     def set_deleted(self, user_id, process_message=None):
         self.set_process(REQUEST_STATE_DELETED, user_id, process_message)
 
+    def save_activity(self, context, activity_type='updated'):
+        model = context["model"]
+        session = context["session"]
+        actor = model.User.by_name(context["user"])
+        activity = model.Activity(
+            actor.id, self.id, "{} request".format(activity_type),
+            {'request': self.as_dict(), 'actor': actor.name}
+        )
+        print("adding new Activity to session")
+        session.add(activity)
+
+    def save_context(self, context, add_activity=True, activity_type='updated'):
+        model = context["model"]
+        session = context["session"]
+        print("adding new WorkflowPackageRequest to session")
+        session.add(self)
+        if add_activity:
+            self.save_activity(context, activity_type)
+        if not context.get('defer_commit'):
+            session.commit()
+        return self
+
+    @classmethod
+    def create(cls, context, data_dict, add_activity=True):
+        workflow_package_request = cls(**data_dict)
+        return workflow_package_request.save_context(context, add_activity, 'new')
+
+    def changes(self, data_dict):
+        return [key for key in data_dict if getattr(self, key) != data_dict[key]]
+
+    @classmethod
+    def update(cls, context, data_dict, add_activity=True, activity_type='updated'):
+        workflow_package_request = cls.get(data_dict["id"])
+        changes = workflow_package_request.changes(data_dict)
+        print(f"update {workflow_package_request} {changes}")
+        if changes:
+            for key in data_dict:
+                setattr(workflow_package_request, key, data_dict[key])
+            workflow_package_request.modified_timestamp = datetime.datetime.utcnow()
+            if ("process_state" in changes and workflow_package_request.process_state not in REQUEST_OPEN_STATES and
+                    not workflow_package_request.process_timestamp):
+                workflow_package_request.process_timestamp = datetime.datetime.utcnow()
+            workflow_package_request.save_context(context, add_activity, activity_type)
+        return workflow_package_request
+
     @classmethod
     def get_for_user(cls, user_id, open, closed, approved, as_requester, as_approver):
         query = model.Session.query(cls)
@@ -153,24 +204,25 @@ class WorkflowPackageRequest(DomainObject):
 
 
 def define_workflow_package_request_table():
-
     workflow_package_request_table = Table(
         'workflow_package_request', meta.metadata,
         # generic identifier
         Column('id', types.UnicodeText, primary_key=True, default=_types.make_uuid),
+        Column('modified_timestamp', types.DateTime, default=datetime.datetime.now(), nullable=False),
+        Column('package_id', types.UnicodeText, ForeignKey('workflow_package_state.package_id', ondelete="CASCADE"),
+               nullable=False),
         # Requester information
-        Column('package_id', types.UnicodeText, ForeignKey('workflow_package_state.package_id', ondelete="CASCADE"), nullable=False),
         Column('request_user_id', types.UnicodeText, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
         Column('request_state', types.UnicodeText, nullable=False),
         # Additional request information
         Column('request_message', types.UnicodeText, default=None, nullable=True),
         Column('request_timestamp', types.DateTime, default=datetime.datetime.now(), nullable=False),
         # Approver information
-        Column('process_user_id', types.UnicodeText, ForeignKey('user.id', ondelete="CASCADE"), default=None, nullable=True),
+        Column('process_user_id', types.UnicodeText, ForeignKey('user.id', ondelete="CASCADE"), default=None,
+               nullable=True),
         Column('process_message', types.UnicodeText, default=None, nullable=True),
         Column('process_timestamp', types.DateTime, default=None, nullable=True),
-        #
-        Column('process_state', types.UnicodeText, default=REQUEST_STATE_PENDING, nullable=True)
+        Column('process_state', types.UnicodeText, default=REQUEST_STATE_PENDING, nullable=True),
     )
     Index(
         'workflow_package_request_only_one_active_request',
@@ -182,14 +234,15 @@ def define_workflow_package_request_table():
     )
     mapper(WorkflowPackageRequest, workflow_package_request_table,
            properties={
-               'state': orm.relationship(
+               '_state': orm.relationship(
                    WorkflowPackageState, uselist=False,
                    backref=orm.backref(
                        '_requests',
                        cascade='all, delete, delete-orphan'
                    )
                ),
-               'requester': orm.relationship(User, primaryjoin=workflow_package_request_table.c.request_user_id == User.id,
-                                             uselist=False),
+               '_requester': orm.relationship(User,
+                                              primaryjoin=workflow_package_request_table.c.request_user_id == User.id,
+                                              uselist=False),
            }, )
     return workflow_package_request_table

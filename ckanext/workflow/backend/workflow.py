@@ -158,8 +158,8 @@ class WorkflowBackend(object):
         result = None
         if cls.has_state(state_id):
             result = cls.states_dict[state_id]
-        elif cls.default_state:
-            result = cls.states_dict[cls.default_state]
+        # elif cls.default_state:
+        #     result = cls.states_dict[cls.default_state]
         return result
 
     @classmethod
@@ -191,7 +191,6 @@ class WorkflowBackend(object):
 
         if state_id in cls.transition_dict:
             for t_id in cls.transition_dict[state_id]:
-                t: WorkflowTransition
                 t = cls.transition_dict[state_id][t_id]
                 # check if we are allowed from state to transition.state
                 # if self.can_request()

@@ -2,7 +2,8 @@ from typing import Dict, Callable
 
 from ckanext.workflow.backend import WorkflowBackend
 from ckanext.workflow.model import WorkflowPackageRequest, WorkflowPackageState
-from ckanext.workflow.model.workflow_request import REQUEST_STATE_PENDING, REQUEST_STATE_APPROVED, REQUEST_STATE_REJECTED
+from ckanext.workflow.model.workflow_package_request import REQUEST_STATE_PENDING, REQUEST_STATE_APPROVED, \
+    REQUEST_STATE_REJECTED
 import ckanext.workflow.common as common
 import ckanext.workflow.helpers as workflow_helpers
 import ckanext.workflow.constants as workflow_constants
@@ -47,7 +48,6 @@ def process_message_required(
                     common.ugettext('Process state "{}" requires a process_message').format(process_state)
                 )
 
-
     return _process_message_required
 
 
@@ -59,11 +59,12 @@ def process_user_id_required(
         process_state = data.get((process_state_field,))
         process_user_id = data.get((process_user_id_field,))
         # check if the current process_state makes sense
-        if process_state is not common.missing and process_state and process_state in WorkflowPackageRequest.states():
-            if process_state not in WorkflowPackageRequest.states(open=True):
-                if process_user_id is common.missing or not process_user_id:
-                    errors[(process_user_id_field,)].append(
-                        common.ugettext('Process state "{}" requires a process_user_id').format(process_state))
+        if has_error(process_state_field, errors):
+            return
+        if process_state not in WorkflowPackageRequest.states(open=True):
+            if process_user_id is common.missing or not process_user_id:
+                errors[(process_user_id_field,)].append(
+                    common.ugettext('Process state "{}" requires a process_user_id').format(process_state))
 
     return _process_user_id_required
 
@@ -72,33 +73,22 @@ def transition_exists(
         package_id_field='package_id', request_state_field='request_state'
 ):
     def _transition_exists(key, data, errors, context):
-        print(f"request_message_required")
+        print(f"_transition_exists")
         package_id = data.get((package_id_field,))
         request_state = data.get((request_state_field,))
+        if has_errors([package_id_field, request_state_field], errors):
+            return
         workflow_state = WorkflowPackageState.get(package_id)
         workflow_transition = None
         if workflow_state:
             workflow_transition = WorkflowBackend.get_transition(workflow_state.state_id, request_state)
 
         if workflow_state and not workflow_transition:
-            errors[(request_state_field,)].append(common.ugettext('No transition exists from state "{}" to state "{}"').format(request_state, workflow_state.state_id))
+            errors[(request_state_field,)].append(
+                common.ugettext('No transition exists from state "{}" to state "{}"').format(request_state,
+                                                                                             workflow_state.state_id))
+
     return _transition_exists
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def has_error(field, errors):
@@ -109,29 +99,34 @@ def transition_exists(
         package_id_field='package_id', request_state_field='request_state'
 ):
     def _transition_exists(key, data, errors, context):
-        print(f"request_message_required")
+        print(f"_transition_exists")
         package_id = data.get((package_id_field,))
         request_state = data.get((request_state_field,))
+        if has_errors([package_id_field, request_state_field], errors):
+            return
         workflow_state = WorkflowPackageState.get(package_id)
         workflow_transition = None
         if workflow_state:
             workflow_transition = WorkflowBackend.get_transition(workflow_state.state_id, request_state)
 
         if workflow_state and not workflow_transition:
-            errors[(request_state_field,)].append(common.ugettext('No transition exists from state "{}" to state "{}"').format(request_state, workflow_state.state_id))
+            errors[(request_state_field,)].append(
+                common.ugettext('No transition exists from state "{}" to state "{}"').format(request_state,
+                                                                                             workflow_state.state_id))
+
     return _transition_exists
 
 
 def request_message_required(
         package_id_field='package_id', request_state_field='request_state', request_message_field='request_message'
 ):
-
     def _request_message_required(key, data, errors, context):
-        print(f"request_message_required")
+        print(f"_request_message_required")
         package_id = data.get((package_id_field,))
         request_state = data.get((request_state_field,))
         request_message = data.get((request_message_field,))
-
+        if has_errors([package_id_field, request_state_field], errors):
+            return
         workflow_state = WorkflowPackageState.get(package_id)
         workflow_transition = None
         if workflow_state:
@@ -140,32 +135,28 @@ def request_message_required(
         if workflow_transition and workflow_transition.request_message_required:
             if request_message is common.missing or not request_message:
                 errors[(request_message_field,)].append(common.ugettext('_request_message_required'))
+
     return _request_message_required
 
 
 def request_does(key, data, errors, context):
     session = context["session"]
-    if not has_error('package_id', errors) and not has_error('request_state', errors):
-        filter_kwargs = {
-            'package_id': data.get(('package_id',)),
-            'request_state': data.get(('request_state',)),
-            'process_state': REQUEST_STATE_PENDING
-        }
-        query = session.query(WorkflowPackageRequest).filter_by(**filter_kwargs)
-        if query.first() is not None:
-            raise common.Invalid(common.ugettext('request_does :: Request id already exists'))
+    if has_errors(['package_id', 'request_state'], errors):
+        return
+    filter_kwargs = {
+        'package_id': data.get(('package_id',)),
+        'request_state': data.get(('request_state',)),
+        'process_state': REQUEST_STATE_PENDING
+    }
+    query = session.query(WorkflowPackageRequest).filter_by(**filter_kwargs)
+    if query.first() is not None:
+        raise common.Invalid(common.ugettext('request_does :: Request id already exists'))
 
 
 def default_current_user(key, data, errors, context):
     value = data.get(key)
     if value is common.missing:
         data[key] = context["user"]
-#
-#
-# def default_current_user(key, data, errors, context):
-#     value = data.get(key)
-#     if value is common.missing:
-#         data[key] = context["user"]
 
 
 def package_has_workflow_state(package_id: str) -> str:
@@ -221,6 +212,11 @@ def organization_id_exists(organization_id: str, context: Dict) -> str:
 
 
 def state_exists(state):
+    """
+
+    :param state:
+    :return:
+    """
     if state not in WorkflowBackend.get_states():
         raise common.Invalid('%s: %s' % (common.ugettext('Not found'), common.ugettext('WorkflowPackageState')))
     return state
@@ -237,24 +233,6 @@ def is_function(value: Callable):
     if not callable(value) and not hasattr(value, "__call__"):
         raise common.Invalid(common.ugettext('Value must be a function'))
     return value
-
-
-# def is_function_with_parameters(varnames):
-#     """
-#         Returns a
-#     """
-#
-#     '''Raises Invalid if the given value is not a function (can't be called)'''
-#
-#     def f(value: Callable):
-#         value = is_function(value)
-#         # noinspection PyUnresolvedReferences
-#         func_varnames = set(value.__code__.co_varnames[:value.__code__.co_argcount])
-#         if not func_varnames == set(varnames):
-#             raise toolkit.Invalid(common.ugettext('is_function_with_parameters'))
-#         return value
-#
-#     return f
 
 
 def is_text_function(text_function: Callable[[], str]) -> Callable[[], str]:
