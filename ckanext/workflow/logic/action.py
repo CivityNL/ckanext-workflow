@@ -5,7 +5,6 @@
 """
 
 from ckan.lib.search import index_for
-from ckanext.authorization.backend import AuthorizationBackend
 from ckanext.workflow.backend import WorkflowBackend
 from ckanext.workflow.interface import IWorkflowPackageRequestController
 from ckan.plugins import toolkit, PluginImplementations
@@ -13,7 +12,7 @@ from ckanext.workflow.logic import workflow_action_schema_decorator
 from ckanext.workflow.model import WorkflowPackageState, WorkflowPackageRequest
 import ckanext.workflow.logic.schema as workflow_schema
 from ckanext.workflow.interface import IWorkflowPackageStateController
-from ckanext.workflow.common import get_action, chained_action, model
+from ckanext.workflow.common import get_action, chained_action, model, side_effect_free
 from ckanext.workflow.interface import IWorkflowPackageRequestController
 from ckanext.workflow.model import WorkflowPackageRequest
 import ckanext.workflow.logic.schema as workflow_schema
@@ -25,9 +24,6 @@ import ckanext.workflow.common as common
 from ckanext.workflow.model import WorkflowPackageRequest, WorkflowPackageState
 from ckan.plugins import toolkit
 import ckanext.workflow.logic.schema as workflow_schema
-from ckanext.authorization.common import side_effect_free, getLogger, ObjectNotFound, get_or_bust, navl_validate, \
-    ValidationError
-from ckanext.authorization.common.toolkit import check_access
 from ckanext.workflow.model import WorkflowPackageRequest
 from ckanext.workflow.interface import IWorkflowPackageRequestController
 from ckan.plugins import PluginImplementations, toolkit

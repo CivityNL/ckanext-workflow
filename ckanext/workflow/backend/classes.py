@@ -1,6 +1,5 @@
-from ckanext.authorization.monkey_patch.authz import has_user_permission_for_dataset
 from ckanext.workflow.backend.validators import is_function_with_parameters
-from ckanext.workflow.common import Invalid, is_sysadmin
+from ckanext.workflow.common import Invalid, is_sysadmin, has_user_permission_for_package
 
 def is_function(value):
     result = True
@@ -48,7 +47,7 @@ class WorkflowState(_WorkflowObject):
         update_actions = {ua.get('permission'): ua.get('to_state', None) for ua in self.update_actions if ua.get('action') == update_action}
         result = False
         for permission in update_actions:
-            if has_user_permission_for_dataset(user_id, permission, pkg_id):
+            if has_user_permission_for_package(pkg_id, user_id, permission):
                 result = True
                 break
         return result
@@ -64,7 +63,7 @@ class WorkflowState(_WorkflowObject):
 
         result = None
         for permission in update_actions:
-            if has_user_permission_for_dataset(user_id, permission, pkg_id):
+            if has_user_permission_for_package(pkg_id, user_id, permission):
                 result = update_actions[permission]
                 break
         if result is None:
@@ -142,7 +141,7 @@ class WorkflowTransition(_WorkflowObject):
             if is_function(check):
                 result = check(context=context, pkg_dict=None)
             else:
-                result = has_user_permission_for_dataset(user_id, check, pkg_id)
+                result = has_user_permission_for_package(pkg_id, user_id, check)
         return result
 
     def request_allowed(self, context, user_id, pkg_id, org_id):

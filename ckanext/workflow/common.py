@@ -144,6 +144,14 @@ CkanVersionException = toolkit.CkanVersionException
 HelperError = toolkit.HelperError
 # noinspection PyUnresolvedReferences
 enqueue_job = toolkit.enqueue_job
+# noinspection PyUnresolvedReferences
+get_permissions = toolkit.get_permissions
+# noinspection PyUnresolvedReferences
+has_user_permission_for_organization = toolkit.has_user_permission_for_organization
+# noinspection PyUnresolvedReferences
+has_user_permission_for_group = toolkit.has_user_permission_for_group
+# noinspection PyUnresolvedReferences
+has_user_permission_for_package = toolkit.has_user_permission_for_package
 
 ### pylon imports
 # # noinspection PyUnresolvedReferences

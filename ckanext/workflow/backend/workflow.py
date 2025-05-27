@@ -1,12 +1,8 @@
-from typing import Callable, Dict, List
-
 from ckanext.workflow.backend.classes import WorkflowState, WorkflowTransition
 from ckanext.workflow.backend.schema import workflow_state_schema, workflow_transition_schema, \
     workflow_update_action_schema
 import ckanext.workflow.constants as workflow_constants
-from ckan.authz import is_sysadmin
 import ckanext.workflow.common as common
-from ckanext.authorization.backend import AuthorizationBackend
 
 # logging
 import logging
@@ -121,9 +117,8 @@ class WorkflowBackend(object):
 
     @classmethod
     def setup(cls):
-
-        permissions = AuthorizationBackend.get_permissions()
         cls.update_actions_dict = setup_update_actions()
+        permissions = common.get_permissions()
         states = setup_states(cls.update_actions_dict.keys(), permissions)
         cls.states_dict = {state['id']: WorkflowState(**state) for state in states}
         cls.default_state = setup_default_state(cls.get_states())
@@ -183,7 +178,7 @@ class WorkflowBackend(object):
         elif not isinstance(actions, list):
             actions = [actions]
 
-        sysadmin = is_sysadmin(user_id)
+        sysadmin = common.is_sysadmin(user_id)
         if sysadmin:
             return [state for state in cls.get_states() if state != state_id]
 
