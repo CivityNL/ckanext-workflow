@@ -1,40 +1,31 @@
-"""
-    AFGAFASDFASDFASDFSAF
-
-
-"""
-
 from ckan.lib.search import index_for
 from ckanext.workflow.backend import WorkflowBackend
-from ckanext.workflow.interface import IWorkflowPackageRequestController
-from ckan.plugins import toolkit, PluginImplementations
 from ckanext.workflow.logic import workflow_action_schema_decorator
-from ckanext.workflow.model import WorkflowPackageState, WorkflowPackageRequest
-import ckanext.workflow.logic.schema as workflow_schema
 from ckanext.workflow.interface import IWorkflowPackageStateController
-from ckanext.workflow.common import get_action, chained_action, model, side_effect_free
-from ckanext.workflow.interface import IWorkflowPackageRequestController
-from ckanext.workflow.model import WorkflowPackageRequest
-import ckanext.workflow.logic.schema as workflow_schema
-import ckanext.workflow.common as common
-from ckanext.workflow.interface import IWorkflowPackageRequestController
-from ckanext.workflow.model import WorkflowPackageRequest
-import ckanext.workflow.logic.schema as workflow_schema
-import ckanext.workflow.common as common
+from ckanext.workflow.common import (
+    get_action, side_effect_free, get_or_bust, PluginImplementations, getLogger
+)
 from ckanext.workflow.model import WorkflowPackageRequest, WorkflowPackageState
-from ckan.plugins import toolkit
-import ckanext.workflow.logic.schema as workflow_schema
-from ckanext.workflow.model import WorkflowPackageRequest
 from ckanext.workflow.interface import IWorkflowPackageRequestController
-from ckan.plugins import PluginImplementations, toolkit
-import ckanext.workflow.logic.schema as workflow_schema
 
-log = common.getLogger(__name__)
+
+log = getLogger(__name__)
 
 
 @workflow_action_schema_decorator
 def workflow_dataset_request_update(context, validated_data_dict):
-    """Just some text"""
+    '''
+    workflow_dataset_request_update ... should add some text here
+
+
+    :param context: param
+    :type context: type
+    :param validated_data_dict: param
+    :type validated_data_dict: type
+    :return: return
+    :rtype: return
+
+    '''
     workflow_dataset_request = WorkflowPackageRequest.update(context, validated_data_dict)
     for plugin in PluginImplementations(IWorkflowPackageRequestController):
         plugin.after_request_update(context, validated_data_dict)
@@ -52,7 +43,7 @@ def workflow_dataset_state_update(context, validated_data_dict):
     actor = model.User.by_name(user)
 
     log.warning("workflow_dataset_state_update validated_data_dict = [{}]".format(validated_data_dict))
-    package_id, state_id = toolkit.get_or_bust(validated_data_dict, ['package_id', 'state_id'])
+    package_id, state_id = get_or_bust(validated_data_dict, ['package_id', 'state_id'])
 
     # get the existing WorkflowPackageState (if exists)
     workflow_state = WorkflowPackageState.get(package_id)
@@ -99,7 +90,7 @@ def workflow_dataset_state_update(context, validated_data_dict):
         plugin.after_state_update(context, validated_data_dict)
 
     # Create activity
-    pkg_dict = toolkit.get_action('package_show')(context, {'id': package_id})
+    pkg_dict = get_action('package_show')(context, {'id': package_id})
 
     activity = model.Activity(
         actor.id, package_id, "changed package", {'package': pkg_dict, 'actor': actor.name if actor else None}
@@ -111,7 +102,7 @@ def workflow_dataset_state_update(context, validated_data_dict):
 
     # update the SOLR index
     index = index_for(model.Package)
-    pkg_dict = toolkit.get_action('package_show')(context, {'id': package_id})
+    pkg_dict = get_action('package_show')(context, {'id': package_id})
     index.update_dict(pkg_dict)
 
     # return the SOLR index
@@ -122,7 +113,7 @@ def workflow_dataset_state_update(context, validated_data_dict):
 def workflow_dataset_request_create(context, validated_data_dict):
     """Just some text"""
     request = WorkflowPackageRequest.create(context, validated_data_dict)
-    for plugin in common.PluginImplementations(IWorkflowPackageRequestController):
+    for plugin in PluginImplementations(IWorkflowPackageRequestController):
         plugin.after_request_create(context, validated_data_dict)
     return request.as_dict()
 
@@ -151,7 +142,7 @@ def workflow_dataset_request_delete(context, validated_data_dict):
 
     actor = model.User.by_name(user)
 
-    request_id = toolkit.get_or_bust(validated_data_dict, 'id')
+    request_id = get_or_bust(validated_data_dict, 'id')
     # get the existing WorkflowPackageState (if exists)
     workflow_dataset_request = WorkflowPackageRequest.get(request_id)
 

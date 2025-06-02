@@ -11,6 +11,7 @@ from ckanext.workflow.backend import WorkflowBackend
 import ckanext.workflow.constants as workflow_constants
 from ckanext.workflow.common import getLogger, model, SingletonPlugin, h, ValidationError
 import ckanext.workflow.common as common
+from ckanext.workflow.utils import load_workflow_specification
 # # logging
 # import logging
 log = getLogger(__name__)
@@ -48,7 +49,8 @@ class WorkflowPlugin(common.SingletonPlugin, common.DefaultTranslation):
     def configure(self, config):
         log.info("configure")
         setup_workflow_request_table()
-        WorkflowBackend.setup()
+        specification = load_workflow_specification('ckanext.workflow.specification')
+        WorkflowBackend.setup(specification)
 
     # IConfigurer
     def update_config(self, config_):
@@ -114,8 +116,7 @@ class WorkflowPlugin(common.SingletonPlugin, common.DefaultTranslation):
             'workflow_get_state_label': helpers.get_state_label,
             'workflow_show_notice_to_be_unpublished_on_edit': helpers.show_notice_to_be_unpublished_on_edit,
             'workflow_choices_helper': helpers.workflow_choices_helper,
-            'workflow_package_request_count': helpers.package_request_count,
-            'workflow_enabled_for_organization': helpers.workflow_enabled_for_organization
+            'workflow_package_request_count': helpers.package_request_count
         }
         return workflow_helpers
 

@@ -8,14 +8,14 @@ from ckanext.workflow import utils
 from ckanext.workflow.backend import WorkflowBackend
 import ckanext.workflow.constants as workflow_constants
 from ckan.plugins import toolkit
-from ckanext.workflow.common import model, get_package_object, convert_user_name_or_id_to_id
+from ckanext.workflow.common import (
+    model, get_package_object, convert_user_name_or_id_to_id, h, config, convert_package_name_or_id_to_id
+)
 from ckanext.workflow.model import WorkflowPackageState, WorkflowPackageRequest
 
 # logging
 import logging
 log = logging.getLogger(__name__)
-
-convert_package_name_or_id_to_id = toolkit.get_converter('convert_package_name_or_id_to_id')
 
 
 def show_notice_to_be_unpublished_on_edit(pkg_dict):
@@ -112,9 +112,26 @@ def workflow_choices_helper(field: dict) -> List[dict[str, str]]:
     return result
 
 
-def workflow_enabled_for_organization(organization):
-    return True
-
-
 def package_request_count(package_id):
     return WorkflowPackageRequest.count_for_package(package_id)
+
+
+# copied from ckanext-scheming
+def language_text(text, prefer_lang=None):
+    """
+    :param text: {lang: text} dict or text string
+    :param prefer_lang: choose this language version if available
+
+    Convert "language-text" to users' language by looking up
+    languag in dict or using gettext if not a dict
+    """
+
+    if prefer_lang is None:
+        try:
+            prefer_lang = h.lang()
+        except TypeError:
+            pass  # lang() call will fail when no user language available
+
+    # list of keys to look for in order of importance
+    lang_keys = [prefer_lang, config.get('ckan.locale_default', 'en'), sorted(text.keys())[0]]
+    return next((text[lang_key] for lang_key in lang_keys if lang_key in text), '')

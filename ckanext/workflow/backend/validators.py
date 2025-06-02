@@ -1,8 +1,11 @@
 from typing import Dict, Callable
+
+from ckanext.workflow import common
 from ckanext.workflow.model import WorkflowPackageRequest
 from ckan.plugins import toolkit
 # logging
 import logging
+import re
 
 log = logging.getLogger(__name__)
 
@@ -11,6 +14,20 @@ _ = toolkit._
 
 unicode_only = toolkit.get_validator("unicode_only")
 one_of = toolkit.get_validator("one_of")
+
+
+def is_action(action_name):
+    """
+        Returns:
+            the given value if an action identified by the action_name can be found
+        Raises:
+            Invalid if not found
+    """
+    try:
+        common.get_action(action_name)
+        return action_name
+    except KeyError:
+        raise toolkit.Invalid(_("Given action '{}' does not exist".format(action_name)))
 
 
 def request_id_does_not_exist(request_id: str) -> str:
@@ -24,20 +41,6 @@ def request_id_does_not_exist(request_id: str) -> str:
     if result:
         raise toolkit.Invalid(_('Request id already exists'))
     return request_id
-
-
-def organization_id_exists(organization_id: str, context: Dict) -> str:
-    """
-        Raises Invalid if an organization identified by the id cannot be found
-    """
-    model = context['model']
-    session = context['session']
-
-    result = session.query(model.Group).get(organization_id)
-
-    if not result or not result.is_organization:
-        raise toolkit.Invalid('%s: %s' % (_('Not found'), _('Organization')))
-    return organization_id
 
 
 def request_approval_validator(key, converted_data, errors, context):
@@ -108,12 +111,25 @@ def one_of_validators(list_of_validators):
     return _one_of_validators
 
 
-def list_one_of_validators(list_of_validators):
-    def _list_one_of_validators(value):
-        if not isinstance(value, list):
-            value = [value]
-        for v in value:
-            one_of_validators(list_of_validators)(v)
-        return value
+def is_css_hex_color(value):
 
-    return _list_one_of_validators
+    # start with all the 'simple' checks based on the allowed forms '#xxx' or '#yyyyyy'
+    correct = bool(value) and value.startswith('#') and len(value) in [4, 7]
+    # check for correct characters [0-9a-fA-F] based on lowercase (if necessary)
+    correct_chars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
+    correct = correct and all(c.lower() in correct_chars for c in value[1:])
+
+    if not correct:
+        raise common.Invalid(_('Invalid CSS HEX color code {}'.format(value)))
+
+    return value
+
+
+def validate_styling_dict(key, converted_data, errors, context):
+    value = converted_data.get(key)
+    for subkey in {'text', 'color'} & set(value.keys()):
+        try:
+            subvalue = value.get(subkey)
+            is_css_hex_color(subvalue)
+        except common.Invalid as exception:
+            errors[key].append(str(exception))

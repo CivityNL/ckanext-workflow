@@ -232,17 +232,22 @@ def define_workflow_package_request_table():
         unique=True,
         postgresql_where=workflow_package_request_table.c.process_state == REQUEST_STATE_PENDING
     )
-    mapper(WorkflowPackageRequest, workflow_package_request_table,
-           properties={
-               '_state': orm.relationship(
-                   WorkflowPackageState, uselist=False,
-                   backref=orm.backref(
-                       '_requests',
-                       cascade='all, delete, delete-orphan'
-                   )
-               ),
-               '_requester': orm.relationship(User,
-                                              primaryjoin=workflow_package_request_table.c.request_user_id == User.id,
-                                              uselist=False),
-           }, )
+    mapper(
+        WorkflowPackageRequest,
+        workflow_package_request_table,
+        properties={
+            '_state': orm.relationship(
+                WorkflowPackageState, uselist=False,
+                backref=orm.backref(
+                    '_requests',
+                    cascade='all, delete, delete-orphan'
+                )
+            ),
+            '_requester': orm.relationship(
+                User,
+                primaryjoin=workflow_package_request_table.c.request_user_id == User.id,
+                uselist=False
+            ),
+        },
+    )
     return workflow_package_request_table

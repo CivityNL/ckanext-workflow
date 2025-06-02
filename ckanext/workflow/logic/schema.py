@@ -1,10 +1,11 @@
 """
-Schema's for validation
+Schema's for validation of the `data_dict` argument for actions
 """
 
 import ckanext.workflow.logic.validators as workflow_validators
 from ckanext.workflow.model.workflow_package_request import REQUEST_STATES
 import ckanext.workflow.common as common
+from ckanext.workflow.utils import sphinx_decorator
 
 log = common.getLogger(__name__)
 
@@ -40,10 +41,7 @@ def ignore_extras(schema_func):
             schema['__extras'] = extras
         return schema
 
-    _ignore_extras.__doc__ = "@decorated with :py:func:`{}.{}`\n{}".format(
-        __name__, ignore_extras.__name__, schema_func.__doc__
-    )
-
+    sphinx_decorator(ignore_extras, _ignore_extras, schema_func)
     return _ignore_extras
 
 
@@ -54,12 +52,12 @@ def workflow_dataset_request_list_schema():
 
 
 @ignore_extras
-def workflow_dataset_request_create_schema() -> object:
+def workflow_dataset_request_create_schema() -> dict:
     """
     This schema is used when trying to create a :class:`ckanext.workflow.model.WorkflowPackageRequest` object.
 
     :return: object
-    :rtype: object
+    :rtype: dict
     """
     return {
         'package_id': [
@@ -100,6 +98,8 @@ def workflow_dataset_request_delete_schema():
 
 @ignore_extras
 def workflow_dataset_state_update_schema():
+    """
+    """
     return {
         'package_id': [common.not_empty, common.unicode_safe, common.convert_package_name_or_id_to_id],
         'state_id': [common.not_empty, common.unicode_safe, workflow_state_exists]
