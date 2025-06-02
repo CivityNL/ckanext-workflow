@@ -1,0 +1,65 @@
+{#
+  Adds a block of custom form fields.
+
+  pkg
+  action
+  title
+
+#}
+
+{% import 'macros/form.html' as form %}
+
+{% set states = h.workflow_get_allowed_states(pkg)[action] %}
+{% if action == 'assign' %}
+  {% set named_route = 'workflow_dataset.change' %}
+{% elif action == 'request' %}
+  {% set named_route = 'workflow_dataset.request' %}
+{% endif %}
+{% set url = h.url_for(named_route, id=pkg.id, package_type=pkg.type ) %}
+
+{% if states | length > 0 %}
+<form method="POST" action="{{ url }}" style="display: inline">
+
+  {% if states | length > 1 %}
+  <div class="dropdown btn-group">
+    <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#">
+      <i class="fa fa-envelope"></i>
+      {{ title }}
+      <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+      {% for state in states  %}
+        <li><a><button type="submit" name="state_id" value="{{ state }}" class="btn btn-link" style="all: inherit; padding: 0; width: 100%">{{ state }} - button</button></a></li>
+        <li><a><button type="button" data-toggle="modal" data-target="#stateModal{{ action }}{{ state }}" data-bs-toggle="modal" data-bs-target="#stateModal{{ action }}{{ state }}" class="btn btn-link" style="all: inherit; padding: 0; width: 100%">{{ state }} - modal</button></a></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% elif states | length == 1 %}
+    {% set state = states[0] %}
+    <button class="btn btn-primary" type="submit" name="state_id" value="{{ state }}">{{ title }}{{ state }}</button>
+  {% endif %}
+</form>  
+{% endif %}
+{% for state in states  %}
+<div class="modal fade" id="stateModal{{ action }}{{ state }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    <form method="POST" action="{{ url }}" style="display: inline">
+      <div class="modal-body">
+        {{ form.markdown('notes', id='field-notes', label=_('Description'), placeholder=_('eg. Some useful notes about the data')) }}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary" name="state_id" value="{{ state }}">Save changes</button>
+      </div>
+    </form>
+    </div>
+  </div>
+</div>
+{% endfor %}

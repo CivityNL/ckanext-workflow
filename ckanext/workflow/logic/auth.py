@@ -1,62 +1,89 @@
-from ckanext.workflow import utils
+'''API functions for creating data from CKAN.'''
+
+from ckanext.workflow.interface import IWorkflowPackageRequestController
+from ckan.plugins import toolkit, PluginImplementations
+from ckanext.workflow.model import WorkflowPackageRequest, WorkflowPackageState
+import ckanext.workflow.logic.schema as workflow_schema
+import ckanext.workflow.common as common
+log = common.getLogger(__name__)
+from ckanext.workflow.interface import IWorkflowPackageRequestController
+from ckan.plugins import toolkit, PluginImplementations
+import ckanext.workflow.helpers as helpers
+import ckanext.workflow.constants as workflow_constants
+from ckanext.workflow.interface import IWorkflowPackageStateController
+# logging
+import logging
+log = logging.getLogger(__name__)
+from ckanext.workflow.interface import IWorkflowPackageRequestController
+from ckan.plugins import PluginImplementations
+# logging
+import logging
+log = logging.getLogger(__name__)
+'''API functions for getting data from CKAN.'''
+from ckanext.workflow.model import WorkflowPackageRequest
 from ckan.plugins import toolkit
 
-_ = toolkit._
+side_effect_free = toolkit.side_effect_free
+# logging
+import logging
 
+'''API functions for deleting data from CKAN.'''
 
-def package_publish(context, data_dict):
-    """ authorization check for package_publish based on package_update and
-        if the user is allowed to publish """
-    package_update_permission = utils.check_access('package_update', context, data_dict)
-    if not has_publish_permission(context, data_dict) or not package_update_permission:
-        user = context.get('user')
-        package_id = data_dict.get("id")
-        msg = _('User {user} not authorized to publish dataset {package}'.format(user=user, package=package_id))
-        return {'success': False, 'msg': msg}
+log = logging.getLogger(__name__)
+def workflow_dataset_request_create(context, data_dict):
+
+    data_dict, errors = common.navl_validate(data_dict, workflow_schema.workflow_dataset_request_create_schema(), context)
+
+    user = context['auth_user_obj']
+    request_fields = ['package_id', 'request_user_id', 'request_state']
+
+    if any(field in errors for field in request_fields):
+        raise common.ValidationError(errors)
+
+    package_id, request_user_id, request_state = common.get_or_bust(data_dict, request_fields)
+    workflow_state = WorkflowPackageState.get(package_id)
+    owner_org = workflow_state.package.owner_org
+    state_id = workflow_state.state_id
+
+    print(common.users_role_for_group_or_org(owner_org, user.name))
+
+    # package_id
+    # request_user_id
+    # request_state
+
+    # what do we need for this to work?
+    #
+
+    log.warning("AUTH workflow_dataset_request_create still needs to be implemented")
+
     return {'success': True}
 
 
-def package_unpublish(context, data_dict):
-    """ authorization check for package_unpublish based on package_update """
-    if not utils.check_access('package_update', context, data_dict):
-        user = context.get('user')
-        package_id = data_dict.get("id")
-        msg = _('User {user} not authorized to unpublish dataset {package}'.format(user=user, package=package_id))
-        return {'success': False, 'msg': msg}
+
+
+def workflow_dataset_request_delete(context, data_dict):
+    log.warning("AUTH workflow_dataset_request_delete still needs to be implemented")
     return {'success': True}
 
 
-def has_publish_permission(context, data_dict):
-    """ check if user is allowed to publish
-        params: user: name or id,
-                org : name or id
-    """
 
-    roles = ["admin"]
+@side_effect_free
+def workflow_dataset_request_show(context, data_dict):
+    log.warning("AUTH workflow_dataset_request_show still needs to be implemented")
+    return {'success': True}
 
-    user = context.get("user", None)
-    if user is None:
-        return False
 
-    pkg_dict = toolkit.get_action("package_show")(context, data_dict)
-    owner_org = pkg_dict.get("owner_org")
-    if owner_org is None:
-        return False
+@side_effect_free
+def workflow_dataset_request_list(context, data_dict):
+    log.warning("AUTH workflow_dataset_request_list still needs to be implemented")
+    return {'success': True}
 
-    member_roles_list = toolkit.get_action("member_roles_list")(context, {"group_type": "organization"})
-    member_list = toolkit.get_action("member_list")(context, {"id": owner_org, "object_type": "user"})
-    user_id = toolkit.get_converter('convert_user_name_or_id_to_id')(context.get("user"), context)
-    if user_id is None:
-        return False
 
-    member_dict = {_id: role for (_id, _, role) in member_list}
-    trans_role = member_dict.get(user_id, None)
-    if trans_role is None:
-        return False
+def workflow_dataset_request_update(context, data_dict):
+    log.warning("AUTH workflow_dataset_request_update still needs to be implemented")
+    return {'success': True}
 
-    member_roles_dict = {role.get("text"): role.get("value") for role in member_roles_list}
-    role = member_roles_dict.get(trans_role, None)
-    if role is None or role not in roles:
-        return False
 
-    return True
+def workflow_dataset_state_update(context, data_dict):
+    log.warning("AUTH workflow_dataset_state_update still needs to be implemented")
+    return {'success': True}

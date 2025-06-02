@@ -1,0 +1,15 @@
+{% extends "organization/read_base.html" %}
+
+{% block subtitle %}{{ _('Requests') }} - {{ super() }}{% endblock %}
+
+{% block primary_content_inner %}
+
+  {% block page_heading %}<h2 class="hide-heading">{{ _('Requests') }}</h2>{% endblock %}
+
+    {% if requests %}
+        {% snippet 'workflow/snippets/request_list.html', requests=requests %}
+    {%  else %}
+      <p class="empty">{{ _('There are no requests associated with this organization') }}</p>
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,13 @@
+{% ckan_extends %}
+
+{% block content_action %}
+  {{ super() }}
+  {% snippet 'workflow/snippets/workflow_button.html', pkg=pkg, action='request', title=_('Request') %}
+  {% snippet 'workflow/snippets/workflow_button.html', pkg=pkg, action='assign', title=_('Assign') %}
+{% endblock %}
+
+{% block content_primary_nav %}
+  {{ super() }}
+  {% set package_request_count = h.workflow_package_request_count(pkg.id) %}
+  {{ h.build_nav_icon('workflow_dataset.package_requests', _('Requests') + ' ({0})'.format(package_request_count), id=pkg.id if is_activity_archive else pkg.name, icon='tasks') }}
+{% endblock %}

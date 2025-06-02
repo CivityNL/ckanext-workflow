@@ -1,0 +1,5 @@
+<ul class="request-list">
+    {% for request in requests %}
+        {% snippet 'workflow/snippets/request_item.html', request=request %}
+    {% endfor %}
+</ul>

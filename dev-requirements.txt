@@ -1,1 +1,2 @@
 pytest-ckan
+alabaster<0.7.14
