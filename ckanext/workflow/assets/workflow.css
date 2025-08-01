@@ -47,9 +47,21 @@
 }
 
 .request-label {
-    width: 32px;
-    height: 32px;
-    /*background-position: -1720px -220px;*/
-    /*transform: scale(0.53);*/
-    /*margin: -14px 0 0 -14px;*/
+    display: inline-block;
+    vertical-align: text-bottom;
+    position: relative;
+    top: 2px;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arrow-up {
+    width: 0; 
+    height: 0; 
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid black;
 }

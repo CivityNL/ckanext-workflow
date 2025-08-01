@@ -1,0 +1,64 @@
+{% extends "snippets/activity_stream.html" %}
+
+{% macro actor_group(activity) %}
+  {% for user_id in activity['users'] %}
+  <span class="actor">
+    {{ h.linked_user(user_id, 0, 30) }}
+  </span>
+  {% endfor %}
+{% endmacro %}
+
+{% macro dataset_group(activity) %}
+  {% set dataset_type = activity['activities'][0]['data']['package']['type'] or 'dataset' %}
+  {% set dataset_title = activity['activities'][0]['data']['package']['title'] %}
+  <span class="dataset">
+    {{ h.link_to(dataset_title if dataset_title else _('unknown'),
+      h.url_for(dataset_type ~ '.read', id=activity.object_id)) }}
+  </span>
+{% endmacro %}
+
+{# Displays an activity stream
+
+activity_stream - the activity data. e.g. the output from package_activity_list
+id - the id or current name of the object (e.g. package name, user id)
+object_type - 'package', 'organization', 'group', 'user'
+
+#}
+{% block activity_stream %}
+  <ul class="activity">
+  {% set can_show_activity_detail = h.check_access('activity_list', {'id': id, 'include_data': True, 'object_type': object_type}) %}
+  {% for key, activities in activity_stream.items() %}
+    {% set activity = activities[0] %}
+    {% set is_activity = 'activity_type' in activity %}
+    {% set multiple = activities|length > 1 %}
+    {% if is_activity and multiple %}
+    {%- snippet "snippets/activity_groups/{}.html".format(
+      activity.activity_type.replace(' ', '_')
+      ), "snippets/activity_groups/fallback.html",
+      activities=activities, can_show_activity_detail=can_show_activity_detail, ah={
+        'actor': actor_group,
+        'dataset': dataset_group
+      }, id=id
+    -%}
+    {% elif is_activity %}
+    {%- snippet "snippets/activities/{}.html".format(
+      activity.activity_type.replace(' ', '_')
+      ), "snippets/activities/fallback.html",
+      activity=activity, can_show_activity_detail=can_show_activity_detail, ah={
+        'actor': actor,
+        'dataset': dataset,
+        'organization': organization,
+        'user': user,
+        'group': group,
+      }, id=id
+    -%}
+    {% else %}
+    {%- snippet "snippets/activities/{}.html".format(key[1]), "snippets/activities/fallback.html",
+      activity=activity, can_show_activity_detail=can_show_activity_detail, ah={
+        'actor': actor,
+      }, id=id
+    -%}
+    {% endif %}
+  {% endfor %}
+  </ul>
+{% endblock %}

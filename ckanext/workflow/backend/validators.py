@@ -1,7 +1,7 @@
 from typing import Dict, Callable
 
 from ckanext.workflow import common
-from ckanext.workflow.model import WorkflowPackageRequest
+from ckanext.workflow.model import WorkflowRequest
 from ckan.plugins import toolkit
 # logging
 import logging
@@ -33,11 +33,11 @@ def is_action(action_name):
 def request_id_does_not_exist(request_id: str) -> str:
     """
         Returns:
-            the given value if a WorkflowPackageRequest identified by the request_id can be found
+            the given value if a WorkflowRequest identified by the request_id can be found
         Raises:
             Invalid if not found
     """
-    result = WorkflowPackageRequest.get(request_id)
+    result = WorkflowRequest.get(request_id)
     if result:
         raise toolkit.Invalid(_('Request id already exists'))
     return request_id
@@ -106,7 +106,7 @@ def one_of_validators(list_of_validators):
                 return value
             except toolkit.Invalid as e:
                 pass
-        raise toolkit.Invalid(_('Value must be one of {}'.format(list_of_validators)))
+        raise toolkit.Invalid(_('Invalid value "{value}". Value must be one of {}'.format(list_of_validators)))
 
     return _one_of_validators
 
@@ -133,3 +133,19 @@ def validate_styling_dict(key, converted_data, errors, context):
             is_css_hex_color(subvalue)
         except common.Invalid as exception:
             errors[key].append(str(exception))
+
+
+def validate_translate_dict(key, converted_data, errors, context):
+    value = converted_data.get(key)
+    if not isinstance(value, dict):
+        raise common.Invalid("Value is not a dictionary")
+    
+    validated_value = {}
+    locales = list(toolkit.h.get_locales_dict().keys())
+    for locale in locales:
+        if locale not in value or not isinstance(value.get(locale), str):
+            errors[key].append("FDSGDFGDSFG")
+        else:
+            validated_value[locale] = value.get(locale)
+
+    converted_data[key] = validated_value

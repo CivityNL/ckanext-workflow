@@ -9,18 +9,19 @@
 
 {% import 'macros/form.html' as form %}
 
-{% set states = h.workflow_get_allowed_states(pkg)[action] %}
+{% set transitions = h.workflow_get_allowed_transitions(pkg) %}
 {% if action == 'assign' %}
   {% set named_route = 'workflow_dataset.change' %}
 {% elif action == 'request' %}
   {% set named_route = 'workflow_dataset.request' %}
 {% endif %}
 {% set url = h.url_for(named_route, id=pkg.id, package_type=pkg.type ) %}
+{% set button_class = 'btn-link' if transitions | length > 1 else 'btn-primary' %}
 
-{% if states | length > 0 %}
+{% if transitions | length > 0 %}
 <form method="POST" action="{{ url }}" style="display: inline">
 
-  {% if states | length > 1 %}
+  {% if transitions | length > 1 %}
   <div class="dropdown btn-group">
     <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#">
       <i class="fa fa-envelope"></i>
@@ -28,20 +29,21 @@
       <span class="caret"></span>
     </a>
     <ul class="dropdown-menu">
-      {% for state in states  %}
-        <li><a><button type="submit" name="state_id" value="{{ state }}" class="btn btn-link" style="all: inherit; padding: 0; width: 100%">{{ state }} - button</button></a></li>
-        <li><a><button type="button" data-toggle="modal" data-target="#stateModal{{ action }}{{ state }}" data-bs-toggle="modal" data-bs-target="#stateModal{{ action }}{{ state }}" class="btn btn-link" style="all: inherit; padding: 0; width: 100%">{{ state }} - modal</button></a></li>
+  {% endif %}
+      {% for key, value in transitions.items() %}
+        {% if transitions | length > 1 %}<li><a>{% endif %}
+          <button type="submit" name="state_id" value="{{ key[1] }}" class="btn {{button_class}}">{{ h.workflow_get_transition_label(key[0], key[1]) }} - {{ action }}</button>
+          <button type="button" data-toggle="modal" data-target="#stateModal{{ action }}{{ key[1] }}" data-bs-toggle="modal" data-bs-target="#stateModal{{ action }}{{ key[1] }}" class="btn {{button_class}}">{{ h.workflow_get_transition_label(key[0], key[1]) }} - {{ action }} - modal</button>
+        {% if transitions | length > 1 %}</a></li>{% endif %}
       {% endfor %}
+  {% if transitions | length > 1 %}
     </ul>
   </div>
-  {% elif states | length == 1 %}
-    {% set state = states[0] %}
-    <button class="btn btn-primary" type="submit" name="state_id" value="{{ state }}">{{ title }}{{ state }}</button>
   {% endif %}
-</form>  
+</form>
 {% endif %}
-{% for state in states  %}
-<div class="modal fade" id="stateModal{{ action }}{{ state }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+{% for transition in transitions  %}
+<div class="modal fade" id="stateModal{{ action }}{{ transition[1] }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -50,13 +52,13 @@
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
-    <form method="POST" action="{{ url }}" style="display: inline">
+    <form method="POST" action="{{ url }}" data-module="basic-form" style="display: inline">
       <div class="modal-body">
-        {{ form.markdown('notes', id='field-notes', label=_('Description'), placeholder=_('eg. Some useful notes about the data')) }}
+        {{ form.markdown('request_message', id='field-request-message', label=_('Message'), placeholder=_('eg. Some useful notes about the data'), is_required=true, attrs={'class': 'form-control', 'required': ''}) }}
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="submit" class="btn btn-primary" name="state_id" value="{{ state }}">Save changes</button>
+        <button type="submit" class="btn btn-primary" name="state_id" value="{{ transition[1] }}">Save changes</button>
       </div>
     </form>
     </div>

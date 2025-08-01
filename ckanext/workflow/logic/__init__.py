@@ -1,10 +1,10 @@
 from ckanext.workflow.backend import WorkflowBackend
-from ckanext.workflow.model import WorkflowPackageState
 from ckanext.workflow.common import (
     chained_auth_function, chained_action, getLogger, g, get_action, h, navl_validate, ValidationError, check_access
 )
 import ckanext.workflow.logic.schema as workflow_schema
 from ckanext.workflow.utils import sphinx_decorator
+import ckanext.workflow.helpers as helpers
 
 log = getLogger(__name__)
 
@@ -21,6 +21,7 @@ def workflow_action_schema_decorator(action_function):
         Validates the `data_dict` by using the schema following the naming convention
         `{action_function.__name__}_schema` and passing it to the action function.
         '''
+        print(f"workflow_action_schema_wrapper -> {data_dict}")
         if not hasattr(workflow_schema, schema_name):
             raise ValueError(f"{schema_name} does not exist")
         schema = getattr(workflow_schema, schema_name)()
@@ -40,22 +41,29 @@ def workflow_action_schema_decorator(action_function):
 def workflow_action_wrapper(action, getter):
     @chained_action
     def workflow_action(original_action, context, data_dict):
+        print(f"{action} - before original")
         result = original_action(context, data_dict)
+        print(f"{action} - after original - {context['session'].new}")
+        if context.get('ignore_workflow', False):
+            print(f"{action} - ignore workflow")
+            return result
         package_ids = getter(context, data_dict)
+        print(f"{action} - {package_ids} - {context['session'].new}")
         for package_id in package_ids:
-            workflow_package_state = WorkflowPackageState.get(package_id)
-            workflow_state = WorkflowBackend.get_state(workflow_package_state.state_id)
-            state_after_update_action = workflow_state.state_after_update_action(
-                action, g.userobj.id, package_id
+            state_id = helpers._get_state_id(package_id)
+            state_after_update_action = WorkflowBackend.get_state_after_update_action(state_id, action, g.userobj.id, package_id)
+            can_assign = (state_after_update_action, state_id) in WorkflowBackend.allowed_transitions(
+                context, state_after_update_action, context['user'], package_id, None, "assign"
             )
-            if state_after_update_action != workflow_package_state.state_id:
+            print(f"{action} - {package_id} - {state_id} - {state_after_update_action} - {can_assign}")
+            if state_after_update_action != state_id and not can_assign:
                 workflow_state_update_context = dict(context, ignore_auth=True)
                 workflow_state_update_data_dict = {
                     'package_id': package_id,
                     'state_id': state_after_update_action
                 }
                 get_action('workflow_dataset_state_update')(workflow_state_update_context, workflow_state_update_data_dict)
-
+        print(f"{action} - return - {context['session'].new}")
         return result
 
     return workflow_action
@@ -65,15 +73,12 @@ def workflow_auth_wrapper(action, getter):
     @chained_auth_function
     def workflow_auth(original_auth, context, data_dict):
         result = original_auth(context, data_dict)
-        if not result.get("success"):
+        if not result.get("success") or context.get('ignore_workflow', False):
             return result
         package_ids = getter(context, data_dict)
         for package_id in package_ids:
-            workflow_package_state = WorkflowPackageState.get(package_id)
-            workflow_state = WorkflowBackend.get_state(workflow_package_state.state_id)
-            update_action_allowed = workflow_state.update_action_allowed(
-                action, g.userobj.id, package_id
-            )
+            state_id = helpers._get_state_id(package_id)
+            update_action_allowed = WorkflowBackend.is_update_action_allowed_for_state(state_id, action, g.userobj.id, package_id)
             if not update_action_allowed:
                 result = {
                     "success": False

@@ -1,0 +1,37 @@
+{% extends "package/read_base.html" %}
+
+{% block subtitle %}{{ _('Request') }} - {{ super() }}{% endblock %}
+
+{% block breadcrumb_content %}
+    {{ super() }}
+	  <li class=>{{ _('Workflow') }}</li>
+	  <li class=>{% link_for _('Requests'), named_route='workflow_dataset.package_requests', id=pkg.name %}</li>
+    <li class="active">{% link_for workflow_request.id, named_route='workflow_dataset.request_show', id=pkg.name, package_type=pkg.type, request_id=workflow_request.id %}</li>
+{% endblock %}
+
+{% block page_primary_action %}
+    <button class="btn btn-primary" type="submit" name="save">{% block save_button_text1 %}{{ _('Next: Add Data') }}{% endblock %}</button>
+    <button class="btn btn-primary" type="submit" name="save">{% block save_button_text2 %}{{ _('Next: Add Data') }}{% endblock %}</button>
+    <button class="btn btn-primary" type="submit" name="save">{% block save_button_text3 %}{{ _('Next: Add Data') }}{% endblock %}</button>
+{% endblock %}
+
+{% block primary_content_inner %}
+
+  {% block page_heading %}<h2 class="hide-heading">{{ _('Request') }}</h2>{% endblock %}
+
+  {% snippet 'snippets/activity_group_stream.html', activity_stream=stream, id=id, object_type='request' %}
+
+  {% block form %}
+  <form id="dataset-edit" class="dataset-form" method="post" action="{{ action }}" data-module="basic-form" novalidate>
+
+    {% block form_actions %}
+      <div class="form-actions">
+      <button class="btn btn-primary pull-right" type="submit" name="save">{% block save_button_text4 %}{{ _('Next: Add Data') }}{% endblock %}</button>
+      <button class="btn btn-secondary pull-right" type="submit" name="save">{% block save_button_text5 %}{{ _('Next: Add Data') }}{% endblock %}</button>
+      </div>
+    {% endblock %}
+
+  </form>
+  {% endblock %}
+
+{% endblock %}

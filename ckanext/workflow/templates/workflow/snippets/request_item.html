@@ -9,32 +9,50 @@
 
   Example:
 
-    {% snippet "package/snippets/resource_item.html", request=request %}
+    {% snippet "package/snippets/resource_item.html", workflow_request=workflow_request %}
 
 #}
 
-<li class="request-item panel" data-id="{{ request.id }}">
-    {% block request_item_title %}
-        <a class="heading" data-toggle="collapse" href="#request_{{ request.id }}">
-            {{ request.request_message | truncate(50) }}
-            <span class="request-label">
-    {% if request.process_state == 'pending' %}
-        <i class="fa fa-circle fa-2x"></i>
+{% set url_action = 'workflow_dataset.request_show' %}
+{% set url = h.url_for(url_action, id=pkg.name or pkg.id, package_type=pkg.type, request_id=workflow_request.id) %}
+{% if workflow_request.is_open %}
+  {% set heading_class = 'alert-info' %}
+  {% set heading_icon = 'circle-o' %}
+{% elif workflow_request.is_ignored %}
+  {% set heading_class = 'alert-warning' %}
+  {% set heading_icon = 'circle' %}
+{% else %}
+    {% if workflow_request.is_approved %}
+        {% set heading_class = 'alert-success' %}
+        {% set heading_icon = 'check-circle' %}
+    {% else %}
+        {% set heading_class = 'alert-error' %}
+        {% set heading_icon = 'times-circle' %}
     {% endif %}
-                {% if request.process_state == 'approved' or request.process_state == 'rejected' %}
-                    <i class="fa fa-check fa-2x"></i>
-                {% endif %}
-                {% if request.process_state == 'deleted' or request.process_state == 'resolved' %}
-                    <i class="fa fa-times fa-2x"></i>
-                {% endif %}
-    </span>
+{% endif %}
+
+<li class="request-item panel" data-id="{{ workflow_request.id }}">
+    {% block request_item_title %}
+        <a class="heading" href="{{ url }}">
+            {{ h.workflow_get_transition_label(workflow_request.current_state, workflow_request.request_state) | truncate(50) }}
+            <span class="request-label {{ heading_class }}">
+                <i class="fa fa-solid fa-{{ heading_icon }} fa-lg" style="background-color: transparent;"></i>
+            </span>
         </a>
-              <ul id="request_{{ request.id }}" class="collapse panel-collapse">
-                    <li>SubTest1</li>
-                    <li>SubTest1</li>
-                    <li>SubTest1</li>
-                </ul>
     {% endblock %}
+  {% block request_item_description %}
+    <p class="description">
+        {{ _('Created {time_ago} by {user}').format(time_ago=h.time_ago_from_timestamp(workflow_request.request_timestamp), user=h.link_to(workflow_request.requester.fullname, url_for('user.read', id=workflow_request.requester.id))) }}
+    {% if not workflow_request.is_open %}
+        |
+        Closed {{ h.time_ago_from_timestamp(workflow_request.process_timestamp) }} by {{ h.link_to(workflow_request.processer.fullname, url_for('user.read', id=workflow_request.processer.id)) }}
+    {% endif %}
+    {% if workflow_request.messages %}
+        | <i class="fa fa-comment"></i> {{ workflow_request.messages | length }}
+    {% endif %}
+    </p>
+
+  {% endblock %}
     {% block request_item_explore %}
         <div class="dropdown btn-group">
             <a href="#" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
@@ -42,8 +60,22 @@
                 {{ _('Explore') }}
                 <span class="caret"></span>
             </a>
+            <ul class="dropdown-menu">
+            {% block request_item_explore_links %}
+                <li>
+                    <a href="{{ url }}">
+                        <i class="fa fa-info-circle"></i>
+                        {{ _('More information') }}
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url }}">
+                    <i class="fa fa-pencil-square-o"></i>
+                    {{ _('Edit') }}
+                    </a>
+                </li>
+            {% endblock %}
+            </ul>
         </div>
     {% endblock %}
-    {#  {% for key in request %}{{ key }}: {{ request[key] }}{% endfor %}#}
-
 </li>

@@ -1,0 +1,138 @@
+{
+    "states": {
+        "draft": {
+            "id": "draft",
+            "label": {
+                "en": "Draft",
+                "nl": "Schets",
+                "sv": "Utkast"
+            },
+            "default": true,
+            "dataset_fields": {
+                "private": true,
+                "contact_name": "Henk"
+            },
+            "styling": {
+                "text": "#123456",
+                "background": "#123456"
+            },
+            "update_actions": [
+                {"action": "package_update", "permission": "package_update", "to_state": "draft"}
+            ]
+        },
+        "private": {
+            "id": "private",
+            "label": {
+                "en": "Private",
+                "nl": "Privé",
+                "sv": "Privat"
+            },
+            "dataset_fields": {
+                "private": true
+            },
+            "styling": {
+                "text": "#123456",
+                "background": "#123456"
+            },
+            "update_actions": [
+                {"action": "package_update", "permission": "package_update", "to_state": "draft"}
+            ]
+        },
+        "public": {
+            "id": "public",
+            "label": {
+                "en": "Public",
+                "nl": "Publiek",
+                "sv": "Offentlig"
+            },
+            "dataset_fields": {
+                "private": false
+            },
+            "styling": {
+                "text": "#123456",
+                "background": "#123456"
+            },
+            "update_actions": [
+                {"action": "package_update", "permission": "package_update", "to_state": "draft"}
+            ]
+        }
+    },
+    "transitions": [
+    {
+        "from_state": "draft",
+        "to_state": "private",
+        "label": {
+            "en": "Review",
+            "nl": "Beoordeling",
+            "sv": "Recension"
+        },
+        "styling": {
+            "text": "#123456",
+            "background": "#123456"
+        },
+        "can_assign": ["package_update"],
+        "can_request": ["package_update"],
+        "can_approve": ["package_update"],
+        "request_message_required": true,
+        "approve_message_required": true,
+        "reject_message_required": true
+    },
+    {
+        "from_state": "private",
+        "to_state": "draft",
+        "label": {
+            "en": "Review",
+            "nl": "Beoordeling",
+            "sv": "Recension"
+        },
+        "styling": {
+            "text": "#123456",
+            "background": "#123456"
+        },
+        "can_assign": ["package_update"],
+        "can_request": ["package_update"],
+        "can_approve": ["package_update"],
+        "request_message_required": true,
+        "approve_message_required": true,
+        "reject_message_required": true
+    },    
+    {
+        "from_state": "private",
+        "to_state": "public",
+        "label": {
+            "en": "Publish",
+            "nl": "Maak openbaar",
+            "sv": "Publicera"
+        },
+        "styling": {
+            "text": "#123456",
+            "background": "#123456"
+        },
+        "can_assign": ["package_update"],
+        "can_request": ["package_update"],
+        "can_approve": ["package_update"],
+        "request_message_required": true,
+        "approve_message_required": false,
+        "reject_message_required": true
+    },
+    {
+        "from_state": "public",
+        "to_state": "private",
+        "label": {
+            "en": "Unpublish",
+            "nl": "Maak privé",
+            "sv": "Avpublicerar"
+        },
+        "styling": {
+            "text": "#123456",
+            "background": "#123456"
+        },
+        "can_assign": ["package_update"],
+        "can_request": [],
+        "can_approve": ["package_update"],
+        "request_message_required": true,
+        "approve_message_required": false,
+        "reject_message_required": false
+    }
+    ]
+}

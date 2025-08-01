@@ -30,7 +30,7 @@ class IWorkflow(Interface):
         return update_actions
 
 
-class IWorkflowPackageRequestController(Interface):
+class IWorkflowRequestController(Interface):
 
     ####
     def after_request_create(self, context, request_dict):
@@ -46,7 +46,7 @@ class IWorkflowPackageRequestController(Interface):
         pass
 
 
-class IWorkflowPackageStateController(Interface):
+class IWorkflowStateController(Interface):
 
     ####
 

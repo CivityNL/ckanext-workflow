@@ -3,9 +3,10 @@ Schema's for validation of the `data_dict` argument for actions
 """
 
 import ckanext.workflow.logic.validators as workflow_validators
-from ckanext.workflow.model.workflow_package_request import REQUEST_STATES
+from ckanext.workflow.model.workflow_request import REQUEST_STATES
 import ckanext.workflow.common as common
 from ckanext.workflow.utils import sphinx_decorator
+from ckan.logic.schema import default_pagination_schema as _default_pagination_schema
 
 log = common.getLogger(__name__)
 
@@ -14,7 +15,6 @@ workflow_request_id_exists = workflow_validators.request_id_exists
 workflow_state_exists = workflow_validators.state_exists
 default_current_user = workflow_validators.default_current_user
 request_does = workflow_validators.request_does
-package_has_workflow_state = workflow_validators.package_has_workflow_state
 request_message_required = workflow_validators.request_message_required
 transition_exists = workflow_validators.transition_exists
 process_user_id_required = workflow_validators.process_user_id_required
@@ -54,19 +54,32 @@ def workflow_dataset_request_list_schema():
 @ignore_extras
 def workflow_dataset_request_create_schema() -> dict:
     """
-    This schema is used when trying to create a :class:`ckanext.workflow.model.WorkflowPackageRequest` object.
+    This schema is used when trying to create a :class:`ckanext.workflow.model.WorkflowRequest` object.
 
     :return: object
     :rtype: dict
     """
     return {
-        'package_id': [
-            common.not_empty, common.unicode_safe, common.convert_package_name_or_id_to_id, package_has_workflow_state
-        ],
+        'package_id': [common.not_empty, common.unicode_safe, common.convert_package_name_or_id_to_id],
         'request_user_id': [common.not_empty, common.unicode_safe, common.convert_user_name_or_id_to_id],
         'request_state': [common.not_empty, common.unicode_safe, workflow_state_exists],
         'request_message': [common.ignore_empty, common.unicode_safe],
         '__after': [request_does, transition_exists(), request_message_required()],
+    }
+
+@ignore_extras
+def workflow_dataset_request_message_create_schema() -> dict:
+    """
+    This schema is used when trying to create a :class:`ckanext.workflow.model.WorkflowRequest` object.
+
+    :return: object
+    :rtype: dict
+    """
+    return {
+        'request_id': [common.not_empty, common.unicode_safe, workflow_request_id_exists],
+        'user_id': [common.not_empty, common.unicode_safe, common.convert_user_name_or_id_to_id],
+        'content': [common.not_empty, common.unicode_safe],
+        'suggestion': [common.ignore_empty, common.unicode_safe]
     }
 
 
@@ -104,3 +117,21 @@ def workflow_dataset_state_update_schema():
         'package_id': [common.not_empty, common.unicode_safe, common.convert_package_name_or_id_to_id],
         'state_id': [common.not_empty, common.unicode_safe, workflow_state_exists]
     }
+
+
+@ignore_extras
+def workflow_request_activity_list_schema():
+    schema = _default_pagination_schema()
+    schema['id'] = [common.not_missing, common.unicode_safe, workflow_request_id_exists]
+    schema['limit'] = [
+        common.configured_default('ckan.activity_list_limit', 31),
+        common.natural_number_validator,
+        common.limit_to_configured_maximum('ckan.activity_list_limit_max', 100)]
+    schema['include_hidden_activity'] = [
+        common.ignore_missing, common.ignore_not_sysadmin, common.boolean_validator]
+    return schema
+
+
+@ignore_extras
+def workflow_request_message_list_schema():
+    return workflow_request_activity_list_schema()
