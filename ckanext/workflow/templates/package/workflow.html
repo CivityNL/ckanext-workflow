@@ -2,14 +2,52 @@
 
 {% block subtitle %}{{ _('Requests') }} - {{ super() }}{% endblock %}
 
+{% block breadcrumb_content_selected %}{% endblock %}
+
+{% block breadcrumb_content %}
+    {{ super() }}
+	  <li class=>{{ _('Workflow') }}</li>
+    <li class="active">{% link_for _('Requests'), named_route='workflow_dataset.package_requests', id=pkg.name %}</li>
+{% endblock %}
+
+{% block page_primary_action %}
+    <button class="btn btn-primary" type="submit" name="save">{% block save_button_text1 %}{{ _('Next: Add Data') }}{% endblock %}</button>
+    <button class="btn btn-primary" type="submit" name="save">{% block save_button_text2 %}{{ _('Next: Add Data') }}{% endblock %}</button>
+    <button class="btn btn-primary" type="submit" name="save">{% block save_button_text3 %}{{ _('Next: Add Data') }}{% endblock %}</button>
+{% endblock %}
+
 {% block primary_content_inner %}
 
   {% block page_heading %}<h2 class="hide-heading">{{ _('Requests') }}</h2>{% endblock %}
 
     {% if requests %}
-       {% snippet 'workflow/snippets/request_list.html', requests=requests %}
+       {% snippet 'workflow/snippets/request_list.html', requests=requests, pkg=pkg %}
     {%  else %}
       <p class="empty">{{ _('There are no requests associated with this dataset') }}</p>
     {% endif %}
+
+{% endblock %}
+
+{% block secondary_content %}
+
+  {% block package_info %}
+    {% snippet 'package/snippets/info.html', pkg=pkg %}
+  {% endblock %}
+  
+  <section class="module module-narrow">
+    <div class="module context-info">
+      <div class="module-content">
+            <h1 class="heading">Workflow requests</h1>
+            <div class="nums">
+              <ul class="fa-ul">
+                <li><i class="fa-li fa fa-circle-o alert-info" style="background-color: transparent;"></i>Open</li>
+                <li><i class="fa-li fa fa-circle alert-warning" style="background-color: transparent;"></i>Ignored</li>
+                <li><i class="fa-li fa fa-check-circle alert-success" style="background-color: transparent;"></i>Approved</li>
+                <li><i class="fa-li fa fa-times-circle alert-error" style="background-color: transparent;"></i>Rejected</li>
+              </ul>
+            </div>
+      </div>
+    </div>
+  </section>
 
 {% endblock %}

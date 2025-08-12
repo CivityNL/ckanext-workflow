@@ -16,6 +16,8 @@ from ckan.plugins import toolkit
 import ckan.logic.auth as _logic_auth
 import ckan.authz as _authz
 
+from ckan.lib.dictization import table_dictize, obj_list_dictize, obj_dict_dictize
+
 users_role_for_group_or_org = _authz.users_role_for_group_or_org
 has_user_permission_for_group_or_org = _authz.has_user_permission_for_group_or_org
 # user_is_collaborator_on_dataset = _authz.user_is_collaborator_on_dataset
@@ -170,6 +172,8 @@ convert_package_name_or_id_to_id = get_converter('convert_package_name_or_id_to_
 empty_if_not_sysadmin = get_validator("empty_if_not_sysadmin")
 ignore_missing = get_validator("ignore_missing")
 unicode_safe = get_validator("unicode_safe")
+ignore_not_sysadmin = get_validator("ignore_not_sysadmin")
+boolean_validator = get_validator("boolean_validator")
 isodate = get_validator("isodate")
 ignore = get_validator("ignore")
 empty = get_validator("empty")
@@ -178,3 +182,8 @@ convert_user_name_or_id_to_id = get_converter("convert_user_name_or_id_to_id")
 not_empty = get_validator("not_empty")
 not_missing = get_converter("not_missing")
 ignore_empty = get_converter("ignore_empty")
+configured_default = get_converter("configured_default")
+limit_to_configured_maximum = get_converter("limit_to_configured_maximum")
+natural_number_validator = get_validator("natural_number_validator")
+convert_to_list_if_string = get_converter("convert_to_list_if_string")
+both_not_empty = get_validator("both_not_empty")

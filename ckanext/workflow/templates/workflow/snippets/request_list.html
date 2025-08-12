@@ -1,5 +1,5 @@
 <ul class="request-list">
-    {% for request in requests %}
-        {% snippet 'workflow/snippets/request_item.html', request=request %}
+    {% for workflow_request in requests %}
+        {% snippet 'workflow/snippets/request_item.html', workflow_request=workflow_request, pkg=pkg %}
     {% endfor %}
 </ul>

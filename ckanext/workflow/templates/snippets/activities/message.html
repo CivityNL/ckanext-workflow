@@ -1,0 +1,19 @@
+<li class="item message">
+  <i class="fa icon fa-comment"></i>
+    <p>
+      {{ _('{actor} commented').format(actor=ah.actor(activity),) | safe }}
+      <span class="date" title="{{ h.render_datetime(activity.timestamp, with_hours=True) }}">
+        {{ h.time_ago_from_timestamp(activity.created) }}
+      </span>
+    </p>
+</li>
+<li class="item message content">
+  <div class="module module-narrow module-shallow">
+    <div class="module-content">
+      <p>{{ h.render_markdown(activity.content) }}</p>
+    </div>
+    <div class="module-heading form-actions">
+      dfghdfghdfghdfgh
+    </div>    
+  </div>
+</li>

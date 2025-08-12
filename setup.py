@@ -30,7 +30,7 @@ setup(
     author_email='''help@civity.nl''',
 
     # Choose your license
-    license='AGPL',
+    license='AGPL-3.0-or-later',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -39,9 +39,6 @@ setup(
         # 4 - Beta
         # 5 - Production/Stable
         'Development Status :: 4 - Beta',
-
-        # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -54,8 +51,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
-        namespace_packages=['ckanext'],
+    packages=['ckanext'],
 
     install_requires=[
       # CKAN extensions should not list dependencies here, but in a separate

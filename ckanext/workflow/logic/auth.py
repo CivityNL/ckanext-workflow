@@ -1,89 +1,99 @@
 '''API functions for creating data from CKAN.'''
 
-from ckanext.workflow.interface import IWorkflowPackageRequestController
-from ckan.plugins import toolkit, PluginImplementations
-from ckanext.workflow.model import WorkflowPackageRequest, WorkflowPackageState
-import ckanext.workflow.logic.schema as workflow_schema
 import ckanext.workflow.common as common
+
+side_effect_free = common.side_effect_free
 log = common.getLogger(__name__)
-from ckanext.workflow.interface import IWorkflowPackageRequestController
-from ckan.plugins import toolkit, PluginImplementations
-import ckanext.workflow.helpers as helpers
-import ckanext.workflow.constants as workflow_constants
-from ckanext.workflow.interface import IWorkflowPackageStateController
-# logging
-import logging
-log = logging.getLogger(__name__)
-from ckanext.workflow.interface import IWorkflowPackageRequestController
-from ckan.plugins import PluginImplementations
-# logging
-import logging
-log = logging.getLogger(__name__)
-'''API functions for getting data from CKAN.'''
-from ckanext.workflow.model import WorkflowPackageRequest
-from ckan.plugins import toolkit
 
-side_effect_free = toolkit.side_effect_free
-# logging
-import logging
+from ckanext.workflow.logic import DEFAULT_ACTIONS, OBJECT_TYPES
 
-'''API functions for deleting data from CKAN.'''
+__all__ = [f'workflow_{o}_{a}' for a in DEFAULT_ACTIONS for o in OBJECT_TYPES]
 
-log = logging.getLogger(__name__)
-def workflow_dataset_request_create(context, data_dict):
 
-    data_dict, errors = common.navl_validate(data_dict, workflow_schema.workflow_dataset_request_create_schema(), context)
+def workflow_state_create(context, validated_data_dict):
+    log.warning("AUTH workflow_state_create still needs to be implemented")
+    return {'success': True}
 
-    user = context['auth_user_obj']
-    request_fields = ['package_id', 'request_user_id', 'request_state']
+def workflow_state_update(context, validated_data_dict):
+    log.warning("AUTH workflow_state_update still needs to be implemented")
+    return {'success': True}
 
-    if any(field in errors for field in request_fields):
-        raise common.ValidationError(errors)
+def workflow_state_patch(context, validated_data_dict):
+    log.warning("AUTH workflow_state_patch still needs to be implemented")
+    return {'success': True}
 
-    package_id, request_user_id, request_state = common.get_or_bust(data_dict, request_fields)
-    workflow_state = WorkflowPackageState.get(package_id)
-    owner_org = workflow_state.package.owner_org
-    state_id = workflow_state.state_id
+def workflow_state_delete(context, validated_data_dict):
+    log.warning("AUTH workflow_state_delete still needs to be implemented")
+    return {'success': True}
 
-    print(common.users_role_for_group_or_org(owner_org, user.name))
+def workflow_state_purge(context, validated_data_dict):
+    log.warning("AUTH workflow_state_purge still needs to be implemented")
+    return {'success': True}
 
-    # package_id
-    # request_user_id
-    # request_state
+def workflow_state_show(context, validated_data_dict):
+    log.warning("AUTH workflow_state_show still needs to be implemented")
+    return {'success': True}
 
-    # what do we need for this to work?
-    #
-
-    log.warning("AUTH workflow_dataset_request_create still needs to be implemented")
-
+def workflow_state_list(context, validated_data_dict):
+    log.warning("AUTH workflow_state_list still needs to be implemented")
     return {'success': True}
 
 
 
+def workflow_request_create(context, data_dict):
+    log.warning("AUTH workflow_request_create still needs to be implemented")
+    return {'success': True}
 
-def workflow_dataset_request_delete(context, data_dict):
-    log.warning("AUTH workflow_dataset_request_delete still needs to be implemented")
+def workflow_request_update(context, data_dict):
+    log.warning("AUTH workflow_request_update still needs to be implemented")
+    return {'success': True}
+
+def workflow_request_patch(context, data_dict):
+    log.warning("AUTH workflow_request_patch still needs to be implemented")
+    return {'success': True}
+
+def workflow_request_delete(context, data_dict):
+    log.warning("AUTH workflow_request_delete still needs to be implemented")
+    return {'success': True}
+
+def workflow_request_purge(context, data_dict):
+    log.warning("AUTH workflow_request_purge still needs to be implemented")
+    return {'success': True}
+
+def workflow_request_show(context, data_dict):
+    log.warning("AUTH workflow_request_show still needs to be implemented")
+    return {'success': True}
+
+def workflow_request_list(context, data_dict):
+    log.warning("AUTH workflow_request_list still needs to be implemented")
     return {'success': True}
 
 
 
-@side_effect_free
-def workflow_dataset_request_show(context, data_dict):
-    log.warning("AUTH workflow_dataset_request_show still needs to be implemented")
+def workflow_message_create(context, data_dict):
+    log.warning("AUTH workflow_message_create still needs to be implemented")
     return {'success': True}
 
-
-@side_effect_free
-def workflow_dataset_request_list(context, data_dict):
-    log.warning("AUTH workflow_dataset_request_list still needs to be implemented")
+def workflow_message_update(context, data_dict):
+    log.warning("AUTH workflow_message_update still needs to be implemented")
     return {'success': True}
 
-
-def workflow_dataset_request_update(context, data_dict):
-    log.warning("AUTH workflow_dataset_request_update still needs to be implemented")
+def workflow_message_patch(context, data_dict):
+    log.warning("AUTH workflow_message_patch still needs to be implemented")
     return {'success': True}
 
+def workflow_message_delete(context, data_dict):
+    log.warning("AUTH workflow_message_delete still needs to be implemented")
+    return {'success': True}
 
-def workflow_dataset_state_update(context, data_dict):
-    log.warning("AUTH workflow_dataset_state_update still needs to be implemented")
+def workflow_message_purge(context, data_dict):
+    log.warning("AUTH workflow_message_purge still needs to be implemented")
+    return {'success': True}
+
+def workflow_message_show(context, data_dict):
+    log.warning("AUTH workflow_message_show still needs to be implemented")
+    return {'success': True}
+
+def workflow_message_list(context, data_dict):
+    log.warning("AUTH workflow_message_list still needs to be implemented")
     return {'success': True}

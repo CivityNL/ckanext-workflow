@@ -1,0 +1,22 @@
+{% set dataset_type = activities[-1]['data']['package']['type'] or 'dataset' %}
+
+<li class="item {{ activities[0].activity_type|replace(' ', '-')|lower }}">
+  <i class="fa icon fa-sitemap"></i>
+  <p>
+    {{ _('{actor} updated the dataset {dataset} {n} times').format(
+      actor=ah.actor(activity),
+      dataset=ah.dataset(activity),
+      n=activities | length
+    )|safe }}
+    <br />
+    <span class="date" title="{{ h.render_datetime(activities[0]['timestamp'], with_hours=True) }}">
+      {{ h.time_ago_from_timestamp(activities[0]['timestamp']) }}
+      {% if can_show_activity_detail %}
+        &nbsp;|&nbsp;
+        <a href="{{ h.url_for(dataset_type ~ '.changes_multiple', old_id=activities[0]['id'], new_id=activities[-1]['id']) }}">
+          {{ _('Changes') }}
+        </a>
+      {% endif %}
+    </span>
+  </p>
+</li>
