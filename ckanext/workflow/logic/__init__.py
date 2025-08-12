@@ -1,6 +1,6 @@
 from ckanext.workflow.backend import WorkflowBackend
 from ckanext.workflow.common import (
-    chained_auth_function, chained_action, getLogger, g, get_action, h, navl_validate, ValidationError, check_access
+    chained_auth_function, chained_action, getLogger, g, get_action, h, navl_validate, ValidationError, check_access, ignore
 )
 import ckanext.workflow.logic.schema as workflow_schema
 from ckanext.workflow.utils import sphinx_decorator
@@ -8,6 +8,8 @@ import ckanext.workflow.helpers as helpers
 
 log = getLogger(__name__)
 
+DEFAULT_ACTIONS = ['create', 'update', 'patch', 'delete', 'purge', 'show', 'list']
+OBJECT_TYPES = ['state', 'request', 'message']
 
 def workflow_action_schema_decorator(action_function):
     '''
@@ -21,15 +23,20 @@ def workflow_action_schema_decorator(action_function):
         Validates the `data_dict` by using the schema following the naming convention
         `{action_function.__name__}_schema` and passing it to the action function.
         '''
-        print(f"workflow_action_schema_wrapper -> {data_dict}")
         if not hasattr(workflow_schema, schema_name):
             raise ValueError(f"{schema_name} does not exist")
         schema = getattr(workflow_schema, schema_name)()
+        extras = schema.get('__extras', [])
+        if ignore not in extras:
+            extras.append(ignore)
+            schema['__extras'] = extras
+        print(f"workflow_action_schema_wrapper for {action_function.__name__} using {schema}")
         validated_data_dict, errors = navl_validate(data_dict, schema, context)
+        print(f"workflow_action_schema_wrapper -> {validated_data_dict}")
         if errors:
             raise ValidationError(errors)
         check_access(action_function.__name__, context, validated_data_dict)
-        return action_function(context, validated_data_dict)
+        return action_function(context, validated_data_dict, **validated_data_dict)
 
     # making sure decorated methods are handled correctly by Sphinx and prepend the docstring with a mention
     extra_message = "See also :py:func:`~ckanext.workflow.logic.schema.{}` for the schema used.".format(schema_name)
@@ -62,7 +69,7 @@ def workflow_action_wrapper(action, getter):
                     'package_id': package_id,
                     'state_id': state_after_update_action
                 }
-                get_action('workflow_dataset_state_update')(workflow_state_update_context, workflow_state_update_data_dict)
+                get_action('workflow_state_update')(workflow_state_update_context, workflow_state_update_data_dict)
         print(f"{action} - return - {context['session'].new}")
         return result
 

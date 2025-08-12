@@ -19,7 +19,7 @@
 
   {% block page_heading %}<h2 class="hide-heading">{{ _('Request') }}</h2>{% endblock %}
 
-  {% snippet 'snippets/activity_group_stream.html', activity_stream=stream, id=id, object_type='request' %}
+  {% snippet 'snippets/activity_group_stream.html', activity_stream=stream, actors=actors, id=id, object_type='request' %}
 
   {% block form %}
   <form id="dataset-edit" class="dataset-form" method="post" action="{{ action }}" data-module="basic-form" novalidate>

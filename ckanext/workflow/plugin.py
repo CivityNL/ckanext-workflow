@@ -57,17 +57,9 @@ class WorkflowPlugin(common.SingletonPlugin, common.DefaultTranslation):
 
     # IActions
     def get_actions(self):
-        actions = {
-            'workflow_dataset_request_list': workflow_action.workflow_dataset_request_list,
-            'workflow_dataset_request_show': workflow_action.workflow_dataset_request_show,
-            'workflow_dataset_request_create': workflow_action.workflow_dataset_request_create,
-            'workflow_dataset_request_message_create': workflow_action.workflow_dataset_request_message_create,
-            'workflow_dataset_request_update': workflow_action.workflow_dataset_request_update,
-            'workflow_dataset_request_delete': workflow_action.workflow_dataset_request_delete,
-            'workflow_dataset_state_update': workflow_action.workflow_dataset_state_update,
-            'workflow_request_activity_list': workflow_action.workflow_request_activity_list,
-            'workflow_request_message_list': workflow_action.workflow_request_message_list
-        }
+        actions = {k: common.side_effect_free(getattr(workflow_action,k)) for k in workflow_action.__all__}
+        for d in [d for d in dir(workflow_action) if d not in workflow_action.__all__ and not d.startswith('__')]:
+            print(f"- {d} CAN BE REMOVED FROM workflow_action (NOT IN ALL)")
         for update_action in WorkflowBackend.update_actions_dict:
             actions[update_action] = workflow_logic.workflow_action_wrapper(
                 update_action, WorkflowBackend.update_actions_dict[update_action]
@@ -82,17 +74,9 @@ class WorkflowPlugin(common.SingletonPlugin, common.DefaultTranslation):
         Implementation of :py:meth:`ckan.plugins.interfaces.IAuthFunctions.get_auth_functions`
         :return:
         """
-        auth_functions = {
-            'workflow_dataset_request_list': workflow_auth.workflow_dataset_request_list,
-            'workflow_dataset_request_show': workflow_auth.workflow_dataset_request_show,
-            'workflow_dataset_request_create': workflow_auth.workflow_dataset_request_create,
-            'workflow_dataset_request_message_create': workflow_auth.workflow_dataset_request_message_create,
-            'workflow_dataset_request_update': workflow_auth.workflow_dataset_request_update,
-            'workflow_dataset_request_delete': workflow_auth.workflow_dataset_request_delete,
-            'workflow_dataset_state_update': workflow_auth.workflow_dataset_state_update,
-            'workflow_request_activity_list': workflow_auth.workflow_request_activity_list,
-            'workflow_request_message_list': workflow_auth.workflow_dataset_request_list
-        }
+        auth_functions = {k: common.auth_allow_anonymous_access(getattr(workflow_auth,k)) for k in workflow_auth.__all__}
+        for d in [d for d in dir(workflow_auth) if d not in workflow_auth.__all__ and not d.startswith('__')]:
+            print(f"- {d} CAN BE REMOVED FROM workflow_auth (NOT IN ALL)")
         for update_action in WorkflowBackend.update_actions_dict:
             auth_functions[update_action] = workflow_logic.workflow_auth_wrapper(
                 update_action, WorkflowBackend.update_actions_dict[update_action]
@@ -155,8 +139,8 @@ class WorkflowPlugin(common.SingletonPlugin, common.DefaultTranslation):
             'package_id': pkg_dict.get("id"),
             'state_id': WorkflowBackend.default_state
         }
-        print("after_create -> workflow_dataset_state_update")
-        common.get_action('workflow_dataset_state_update')(workflow_state_update_context, workflow_state_update_data_dict)
+        print("after_create -> workflow_state_update")
+        common.get_action('workflow_state_update')(workflow_state_update_context, workflow_state_update_data_dict)
 
     def after_update(self, context, pkg_dict):
         print("after_update")
@@ -184,7 +168,7 @@ class WorkflowPlugin(common.SingletonPlugin, common.DefaultTranslation):
         if self.WORKFLOW_PACKAGE_STATE_ID_FIELD in search_results['search_facets']:
             items = search_results['search_facets'][self.WORKFLOW_PACKAGE_STATE_ID_FIELD]['items']
             items = [
-                dict(item, display_name=WorkflowBackend.get_state(item["name"]).label) for item in items
+                dict(item, display_name=WorkflowBackend.get_state_label(item["name"])) for item in items
             ]
             search_results['search_facets'][self.WORKFLOW_PACKAGE_STATE_ID_FIELD]['items'] = items
 

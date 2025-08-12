@@ -32,13 +32,17 @@ object_type - 'package', 'organization', 'group', 'user'
     {% set is_activity = 'activity_type' in activity %}
     {% set multiple = activities|length > 1 %}
     {% if is_activity and multiple %}
-    {%- snippet "snippets/activity_groups/{}.html".format(
-      activity.activity_type.replace(' ', '_')
-      ), "snippets/activity_groups/fallback.html",
-      activities=activities, can_show_activity_detail=can_show_activity_detail, ah={
-        'actor': actor_group,
-        'dataset': dataset_group
-      }, id=id
+    {%- snippet "snippets/activity_group.html", 
+      activities=activities, actors=actors[key], object_type=object_type, 
+      can_show_activity_detail=can_show_activity_detail, 
+      ah={
+        'actor': actor,
+        'dataset': dataset,
+        'organization': organization,
+        'user': user,
+        'group': group,
+      }, 
+      id=id
     -%}
     {% elif is_activity %}
     {%- snippet "snippets/activities/{}.html".format(

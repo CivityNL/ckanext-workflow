@@ -2,16 +2,17 @@
 
 '''Model.'''
 
-from sqlalchemy.orm import mapper, relationship, backref, foreign
+from sqlalchemy.orm import mapper, relationship, backref, foreign, remote, aliased
 from sqlalchemy.types import UnicodeText, DateTime
-from ckan.model import User, Package, DomainObject, Session
+from ckan.model import User, Package, DomainObject, Session, Activity
 from ckan.model.meta import metadata
 from ckanext.workflow.model.workflow_state import WorkflowState
-from ckanext.workflow.model.workflow_request_message import WorkflowRequestMessage
+from ckanext.workflow.model.workflow_message import WorkflowMessage
+from ckanext.workflow.model.workflow_object import WorkflowObject
 from ckan.model.types import make_uuid, JsonDictType
 import ckan.model as model
 import datetime
-from sqlalchemy import Table, Column, ForeignKey, Index, desc, asc, or_, and_, cast
+from sqlalchemy import Table, Column, ForeignKey, Index, desc, asc, or_, and_, cast, Enum, select
 # logging
 import logging
 
@@ -21,7 +22,7 @@ log = logging.getLogger(__name__)
 REQUEST_STATE_PENDING = 'pending'
 REQUEST_STATE_APPROVED = 'approved'
 REQUEST_STATE_REJECTED = 'rejected'
-REQUEST_STATE_DELETED = 'deleted'
+REQUEST_STATE_CLOSED = 'closed'
 REQUEST_STATE_RESOLVED = 'resolved'
 
 # list of states meaning a request is still waiting for a reaction)
@@ -29,11 +30,11 @@ REQUEST_OPEN_STATES = [REQUEST_STATE_PENDING]
 # list of states meaning a request is closed due to a reaction
 REQUEST_HANDLED_STATES = [REQUEST_STATE_APPROVED, REQUEST_STATE_REJECTED]
 # list of states meaning a request is closed because something which made the request invalid
-REQUEST_IGNORED_STATES = [REQUEST_STATE_DELETED, REQUEST_STATE_RESOLVED]
+REQUEST_IGNORED_STATES = [REQUEST_STATE_CLOSED, REQUEST_STATE_RESOLVED]
 REQUEST_STATES = REQUEST_OPEN_STATES + REQUEST_HANDLED_STATES + REQUEST_IGNORED_STATES
 
 
-class WorkflowRequest(DomainObject):
+class WorkflowRequest(WorkflowObject):
     # list of all the columns to make them recognized by the IDE
     id = None
     package_id = None
@@ -149,8 +150,8 @@ class WorkflowRequest(DomainObject):
     def set_resolved(self, user_id):
         self.set_process(REQUEST_STATE_RESOLVED, user_id)
 
-    def set_deleted(self, user_id):
-        self.set_process(REQUEST_STATE_DELETED, user_id)
+    def set_closed(self, user_id):
+        self.set_process(REQUEST_STATE_CLOSED, user_id)
 
     def save_activity(self, context, activity_type='updated'):
         model = context["model"]
@@ -245,7 +246,7 @@ class WorkflowRequest(DomainObject):
             result['messages'] = [m.as_dict() for m in self.messages]
         if include_users:
             result['requester'] = self.requester.as_dict() if self.requester else None
-            result['processer'] = self.processer.as_dict() if self.processer else None
+            result['processor'] = self.processor.as_dict() if self.processor else None
         return result
 
 
@@ -254,34 +255,31 @@ def define_workflow_request_table():
         'workflow_request',
         metadata,
         # generic identifier
-        Column('id', UnicodeText, primary_key=True, default=make_uuid),
-        Column('modified_timestamp', DateTime, default=datetime.datetime.now(), nullable=False),
+        *WorkflowRequest.get_default_columns(),
         Column('package_id', UnicodeText, ForeignKey('package.id', ondelete="CASCADE"), nullable=False),
-        Column('current_state', UnicodeText, nullable=False),
+        Column('from_state_id', UnicodeText, nullable=False),
         # Requester information
-        Column('request_user_id', UnicodeText, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
-        Column('request_state', UnicodeText, nullable=False),
+        Column('user_id', UnicodeText, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
+        Column('to_state_id', UnicodeText, nullable=False),
         # Additional request information
-        Column('request_timestamp', DateTime, default=datetime.datetime.now(), nullable=False),
-        # Approver information
-        Column('process_user_id', UnicodeText, ForeignKey('user.id', ondelete="CASCADE"), default=None, nullable=True),
-        Column('process_timestamp', DateTime, default=None, nullable=True),
-        Column('process_state', UnicodeText, default=REQUEST_STATE_PENDING, nullable=True),
+        Column('processed_user_id', UnicodeText, ForeignKey('user.id', ondelete="CASCADE"), default=None, nullable=True),
+        Column('processed_timestamp', DateTime, default=None, nullable=True),
+        Column('processed_state', UnicodeText, default=REQUEST_STATE_PENDING, nullable=True),
     )
     Index(
         'workflow_request_index_2',
         workflow_request_table.c.package_id,
-        workflow_request_table.c.current_state,
-        workflow_request_table.c.request_state
+        workflow_request_table.c.from_state_id,
+        workflow_request_table.c.to_state_id
     )
     Index(
         'workflow_request_only_one_active_request',
         workflow_request_table.c.package_id,
-        workflow_request_table.c.current_state,
-        workflow_request_table.c.request_state,
-        workflow_request_table.c.process_state,
+        workflow_request_table.c.from_state_id,
+        workflow_request_table.c.to_state_id,
+        workflow_request_table.c.processed_state,
         unique=True,
-        postgresql_where=workflow_request_table.c.process_state == REQUEST_STATE_PENDING
+        postgresql_where=workflow_request_table.c.processed_state == REQUEST_STATE_PENDING
     )
     mapper(
         WorkflowRequest,
@@ -290,20 +288,29 @@ def define_workflow_request_table():
             '_state': relationship(
                 WorkflowState,
                 uselist=False,
-                primaryjoin=workflow_request_table.c.package_id == foreign(WorkflowState.package_id)
+                primaryjoin=foreign(workflow_request_table.c.package_id) == remote(WorkflowState.package_id)
             ),
             '_package': relationship(Package, uselist=False),
             '_requester': relationship(
                 User,
-                primaryjoin=workflow_request_table.c.request_user_id == User.id,
+                primaryjoin=workflow_request_table.c.user_id == User.id,
                 uselist=False
             ),
-            '_processer': relationship(
+            '_processor': relationship(
                 User,
-                primaryjoin=workflow_request_table.c.process_user_id == User.id,
+                primaryjoin=workflow_request_table.c.processed_user_id == User.id,
                 uselist=False
             ),
-            '_messages': relationship(WorkflowRequestMessage, uselist=True),
+            '_messages': relationship(
+                WorkflowMessage, 
+                primaryjoin=and_(foreign(workflow_request_table.c.id) == remote(WorkflowMessage.reference_id), WorkflowMessage.reference_type == WorkflowRequest.get_object_type_name()),
+                uselist=True
+            ),
+            '_activities': relationship(
+                Activity,
+                primaryjoin=foreign(workflow_request_table.c.id) == remote(Activity.object_id),
+                uselist=True
+            ),
         },
     )
     return workflow_request_table

@@ -58,10 +58,60 @@
     justify-content: center;
 }
 
-.arrow-up {
-    width: 0; 
-    height: 0; 
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-bottom: 10px solid black;
+.activity .item.message.content {
+
+    .module-heading {
+        border-left: 1px solid #ddd;
+        border-right: 1px solid #ddd;
+        border-radius: 0 0 3px 3px;
+    }
+
+    .module-content {
+        border: 1px solid #ddd;
+        background-color: #fff;
+        border-radius: 3px 3px 0 0;
+    }
+
+    div.module::before {
+        position: absolute;
+        content: '';
+        left: 0px;
+        top: -9px;
+        width: 0px;
+        height: 0px;
+        border-left: 15px solid transparent;
+        border-right: 15px solid transparent;
+        border-bottom: 10px solid #ddd;
+    }
+
+     .user-image {
+        left: 0;
+     }
+}
+
+ul.activity ul.activity {
+
+    margin-left: 2em;
+    background: none;
+    list-style-type: disc;
+
+    li.item {
+        margin: 0px;
+
+        br {display:none}
+
+        span.date::before {
+            content: "|"
+        }
+
+        .icon {display:none}
+
+        .user-image {display:none}
+
+        p {margin:0}
+    }
+
+    li.item::before, li.item::after {
+        content: none;
+    }
 }

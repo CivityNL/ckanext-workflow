@@ -1,7 +1,7 @@
 from typing import Dict, Callable
-
+import ckan.model as model
 from ckanext.workflow.backend import WorkflowBackend
-from ckanext.workflow.model import WorkflowRequest, WorkflowState
+from ckanext.workflow.model import WorkflowRequest, WorkflowState, WorkflowMessage
 from ckanext.workflow.model.workflow_request import REQUEST_STATE_PENDING, REQUEST_STATE_APPROVED, \
     REQUEST_STATE_REJECTED
 import ckanext.workflow.common as common
@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 unicode_only = common.get_validator("unicode_only")
 one_of = common.get_validator("one_of")
 empty = common.get_validator("empty")
+default = common.get_validator("default")
 
 
 def has_errors(fields, errors):
@@ -127,12 +128,13 @@ def request_does(key, data, errors, context):
 
 
 def default_current_user(key, data, errors, context):
+    print("default_current_user")
     value = data.get(key)
-    if value is common.missing:
+    if value is None or value == '' or value is common.missing:
         data[key] = context["user"]
 
 
-def package_has_workflow_state(package_id: str) -> str:
+def workflow_state_exists_for_package(package_id: str) -> str:
     """
         Returns:
             the given value if a WorkflowRequest identified by the request_id can be found
@@ -142,6 +144,19 @@ def package_has_workflow_state(package_id: str) -> str:
     result = WorkflowState.get(package_id)
     if not result:
         raise common.Invalid(common.ugettext('Package does not have a WorkflowState'))
+    return package_id
+
+
+def workflow_state_does_not_exist_for_package(package_id: str) -> str:
+    """
+        Returns:
+            the given value if a WorkflowRequest identified by the request_id can be found
+        Raises:
+            Invalid if not found
+    """
+    result = WorkflowState.get(package_id)
+    if result:
+        raise common.Invalid(common.ugettext('Package does have a WorkflowState'))
     return package_id
 
 
@@ -158,6 +173,13 @@ def request_id_does_not_exist(request_id: str) -> str:
     return request_id
 
 
+def workflow_message_exists(message_id: str) -> str:
+    result = WorkflowMessage.get(message_id)
+    if not result:
+        raise common.Invalid(common.ugettext('Message does not exists'))
+    return message_id
+
+
 def request_id_exists(request_id: str) -> str:
     """
         Returns:
@@ -171,17 +193,15 @@ def request_id_exists(request_id: str) -> str:
     return request_id
 
 
-def organization_id_exists(organization_id: str, context: Dict) -> str:
+def organization_id_exists(organization_id: str) -> str:
     """
         Raises Invalid if an organization identified by the id cannot be found
     """
-    model = context['model']
-    session = context['session']
 
-    result = session.query(model.Group).get(organization_id)
+    result = model.Group.get(organization_id)
     if not result or not result.is_organization:
         raise common.Invalid('%s: %s' % (common.ugettext('Not found'), common.ugettext('Organization')))
-    return organization_id
+    return result.id
 
 
 def state_exists(state):
@@ -221,15 +241,23 @@ def is_text_function(text_function: Callable[[], str]) -> Callable[[], str]:
     return text_function
 
 
-def list_one_of(list_of_value):
-    def _list_one_of(value):
+def list_validator(validator):
+    """
+    Validates a list of values, each value validated using the validator
+    """
+    def _list_validator(value):
         if not isinstance(value, list):
             value = [value]
-        for v in value:
-            one_of(list_of_value)(v)
-        return value
+        return [validator(v) for v in value]
 
-    return _list_one_of
+    return _list_validator
+
+
+def list_one_of(list_of_values):
+    """
+    Validates a list of values, each value requiring to be 'one_of' the given list of values
+    """
+    return list_validator(one_of(list_of_values))
 
 
 def one_of_validators(list_of_validators):
@@ -256,74 +284,34 @@ def list_one_of_validators(list_of_validators):
     return _list_one_of_validators
 
 
-# def workflow_state_after_validator(key, converted_data, errors, context):
-#     """
 
-#     :param key:
-#     :param converted_data:
-#     :param errors:
-#     :param context:
-#     :return:
-#     """
+###
 
-#     log.warning("workflow_state_after_validator")
+def message_exists(message_id):
+    message = WorkflowMessage.get(message_id)
+    print(f"found {message} for {message_id}")
+    if message is None:
+        raise common.Invalid('%s: %s' % (common.ugettext('Not found'), common.ugettext('WorkflowMessage')))
+    return message_id
 
-#     def add_error(field_key, error):
-#         """
-#         Small helper function to add errors to the errors
-#         :param field_key: key of the field
-#         :param error: error message
-#         """
-#         errors[(field_key,)].append(error)
 
-#     if any(errors[key] for key in errors):
-#         # something is already wrong, so no need to do this check
-#         return
+def reference_object_exists(key, data, errors, context):
+    session = context["session"]
+    if has_errors(['reference_type', 'reference_id'], errors):
+        return
 
-#     pkg = context.get("package", None)
+    object_type = data.get(('reference_type',))
+    object_id = data.get(('reference_id',))
+    print(f"{object_type} {object_id}")
+    if not object_type or not object_id:
+        return
 
-#     if pkg is None:
-#         # let's assume we started with the default
-#         before_state = workflow_constants.DEFAULT_STATE.id
-#     else:
-#         before_state = workflow_helpers._get_state_id(pkg)
-
-#     # let's see if we can deal with the rest now
-#     user_id = context['auth_user_obj'].id
-#     pkg_id = converted_data.get(("id",))
-#     pkg_type = converted_data.get(("type",))
-#     owner_org = converted_data.get(("owner_org",))
-#     after_state = converted_data.get((workflow_constants.DEFAULT_FIELD,))
-
-#     # we'll need to revalidate the state field as this is also based on the organization
-#     if owner_org and workflow_helpers.workflow_enabled_for_organization(owner_org):
-#         if not after_state:
-#             # workflow state field required
-#             add_error(workflow_constants.DEFAULT_FIELD, common.ugettext('Missing value'))
-#         else:
-#             if before_state != after_state:
-#                 allowed_states = workflow_constants.WORKFLOW.allowed_states(
-#                     context, before_state, user_id, pkg_id, owner_org, actions="assign"
-#                 )
-#                 if after_state not in allowed_states:
-#                     add_error(
-#                         workflow_constants.DEFAULT_FIELD,
-#                         common.ugettext('Value must be one of {}'.format(allowed_states))
-#                     )
-
-#             state = workflow_constants.WORKFLOW.get_state(after_state)
-#             if state.dataset_fields:
-#                 for field in state.dataset_fields:
-#                     field_value = state.dataset_fields.get(field)
-#                     if converted_data.get((field,)) != field_value:
-#                         add_error(
-#                             field,
-#                             common.ugettext(
-#                                 'The state {state} requires this field to have the value of {value}'.format(
-#                                     state=after_state, value=field_value
-#                                 )
-#                             )
-#                         )
-#     else:
-#         if after_state:
-#             add_error(workflow_constants.DEFAULT_FIELD, common.ugettext('Value must be one of {}'.format([None])))
+    obj = None
+    if object_type == 'package':
+        obj = model.Package.get(object_id)
+    if object_type == 'workflow_request':
+        obj = WorkflowRequest.get(object_id)
+    if object_type == 'workflow_message':
+        obj = WorkflowMessage.get(object_id)
+    if obj is None:
+        raise common.Invalid(common.ugettext('reference_object_exists is not true'))

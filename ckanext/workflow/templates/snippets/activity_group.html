@@ -1,11 +1,10 @@
 {% set dataset_type = activities[-1]['data']['package']['type'] or 'dataset' %}
 
-<li class="item {{ activities[0].activity_type|replace(' ', '-')|lower }}">
+<li class="item changed-package">
   <i class="fa icon fa-sitemap"></i>
   <p>
-    {{ _('{actor} updated the dataset {dataset} {n} times').format(
-      actor=ah.actor(activity),
-      dataset=ah.dataset(activity),
+    {{ _('updated the dataset {dataset} {n} times').format(
+      dataset=ah.dataset(activities[-1]),
       n=activities | length
     )|safe }}
     <br />
@@ -19,4 +18,5 @@
       {% endif %}
     </span>
   </p>
+  {% snippet 'snippets/activity_stream.html', activity_stream=activities, actors=actors, id=id, object_type=object_type %}
 </li>

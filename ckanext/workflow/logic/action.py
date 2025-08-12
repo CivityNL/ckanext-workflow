@@ -3,47 +3,31 @@ from ckanext.workflow.backend import WorkflowBackend
 from ckanext.workflow.logic import workflow_action_schema_decorator
 from ckanext.workflow.interface import IWorkflowStateController
 from ckanext.workflow.common import (
-    get_action, side_effect_free, get_or_bust, PluginImplementations, getLogger
+    get_action, side_effect_free, get_or_bust, PluginImplementations, getLogger, missing
 )
-from ckanext.workflow.model import WorkflowRequest, WorkflowState, WorkflowRequestMessage
+from ckanext.workflow.model import WorkflowRequest, WorkflowState, WorkflowMessage
 from ckanext.workflow.interface import IWorkflowRequestController
 import ckan.lib.dictization.model_dictize as model_dictize
 import ckanext.workflow.helpers as helpers
+from ckanext.workflow.logic import DEFAULT_ACTIONS, OBJECT_TYPES
 
 log = getLogger(__name__)
 
+__all__ = [f'workflow_{o}_{a}' for a in DEFAULT_ACTIONS for o in OBJECT_TYPES]
+
+
+# state related actions
+@workflow_action_schema_decorator
+def workflow_state_create(context, package_id, state_id):
+    pass
 
 @workflow_action_schema_decorator
-def workflow_dataset_request_update(context, validated_data_dict):
-    '''
-    workflow_dataset_request_update ... should add some text here
-
-
-    :param context: param
-    :type context: type
-    :param validated_data_dict: param
-    :type validated_data_dict: type
-    :return: return
-    :rtype: return
-
-    '''
-    workflow_dataset_request = WorkflowRequest.update(context, validated_data_dict)
-    for plugin in PluginImplementations(IWorkflowRequestController):
-        plugin.after_request_update(context, validated_data_dict)
-    return workflow_dataset_request.as_dict()
-
-
-@workflow_action_schema_decorator
-def workflow_dataset_state_update(context, validated_data_dict):
-    """Just some text"""
-    print("workflow_dataset_state_update")
+def workflow_state_update(context, package_id, state_id):
     session = context["session"]
     model = context["model"]
     user = context["user"]
 
     actor = model.User.by_name(user)
-
-    package_id, state_id = get_or_bust(validated_data_dict, ['package_id', 'state_id'])
 
     # get the existing WorkflowState (if exists)
     workflow_state = WorkflowState.get(package_id)
@@ -95,7 +79,7 @@ def workflow_dataset_state_update(context, validated_data_dict):
     session.flush()
 
     for plugin in PluginImplementations(IWorkflowStateController):
-        plugin.after_state_update(context, validated_data_dict)
+        plugin.after_state_update(context, package_id, state_id)
 
     # Create activity
     pkg_dict = get_action('package_show')(context, {'id': package_id})
@@ -118,7 +102,38 @@ def workflow_dataset_state_update(context, validated_data_dict):
 
 
 @workflow_action_schema_decorator
-def workflow_dataset_request_create(context, validated_data_dict):
+def workflow_state_patch(context, package_id, state_id):
+    return workflow_state_update(context, package_id, state_id)
+
+
+@workflow_action_schema_decorator
+def workflow_state_delete(context, package_id):
+    pass
+
+
+@workflow_action_schema_decorator
+def workflow_state_purge(context, package_id):
+    pass
+
+
+@workflow_action_schema_decorator
+def workflow_state_show(context, package_id):
+    return WorkflowState.get(package_id).as_dict()
+
+
+@workflow_action_schema_decorator
+def workflow_state_list(context, validated_data_dict,
+                        limit=missing, offset=missing, 
+                        order_by=missing, 
+                        created_from=missing, created_to=missing, modified_from=missing, modified_to=missing, 
+                        state=missing, owner_org=missing, package_state=missing
+    ):
+    return [r.as_dict(context) for r in WorkflowState.query(**validated_data_dict).all()]
+
+# request related actions
+
+@workflow_action_schema_decorator
+def workflow_request_create(context, validated_data_dict):
     """Just some text"""
     print(f"workflow_dataset_request_create -> {validated_data_dict}")
     request_message = None
@@ -132,8 +147,8 @@ def workflow_dataset_request_create(context, validated_data_dict):
         dict(validated_data_dict, current_state=current_state)
     )
     if request_message:
-        WorkflowRequestMessage.create(context, {
-            'request_id': request.id, 
+        WorkflowMessage.create(context, {
+            'workflow_request_id': request.id, 
             'user_id': request.request_user_id,
             'content': request_message
         }
@@ -143,28 +158,154 @@ def workflow_dataset_request_create(context, validated_data_dict):
     print(f"workflow_dataset_request_create -> return request as dict")
     return request.as_dict()
 
+@workflow_action_schema_decorator
+def workflow_request_update(context, validated_data_dict):
+    '''
+    workflow_dataset_request_update ... should add some text here
+
+
+    :param context: param
+    :type context: type
+    :param validated_data_dict: param
+    :type validated_data_dict: type
+    :return: return
+    :rtype: return
+
+    '''
+    workflow_dataset_request = WorkflowRequest.update(context, validated_data_dict)
+    for plugin in PluginImplementations(IWorkflowRequestController):
+        plugin.after_request_update(context, validated_data_dict)
+    return workflow_dataset_request.as_dict()
+
+@workflow_action_schema_decorator
+def workflow_request_patch(context, validated_data_dict):
+    return workflow_request_update(context, validated_data_dict)
+
+@workflow_action_schema_decorator
+def workflow_request_delete(context, validated_data_dict):
+    """Just some text"""
+    log.warning(" workflow_dataset_request_delete")
+    session = context["session"]
+    model = context["model"]
+    user = context["user"]
+
+    actor = model.User.by_name(user)
+
+    request_id = get_or_bust(validated_data_dict, 'id')
+    # get the existing WorkflowState (if exists)
+    workflow_dataset_request = WorkflowRequest.get(request_id)
+
+    session.delete(workflow_dataset_request)
+
+    for plugin in PluginImplementations(IWorkflowRequestController):
+        plugin.after_request_delete(context, validated_data_dict)
+
+    request_activity = model.Activity(
+        actor.id, request_id, "deleted request",
+        {'request': workflow_dataset_request.as_dict(), 'actor': actor.name if actor else None}
+    )
+    session.add(request_activity)
+
+    if not context.get('defer_commit'):
+        model.repo.commit()
+
+@workflow_action_schema_decorator
+def workflow_request_purge(context, validated_data_dict):
+    pass
+
+@workflow_action_schema_decorator
+def workflow_request_show(context, validated_data_dict):
+    """Just some text"""
+    return WorkflowRequest.get(validated_data_dict['id']).as_dict()
+
+@workflow_action_schema_decorator
+def workflow_request_list(context, validated_data_dict):
+    """Just some text"""
+    return [request.as_dict() for request in WorkflowRequest.all()]
+
+# message related actions
+
+
+@workflow_action_schema_decorator
+def workflow_message_create(context, validated_data_dict,
+                            created=missing,
+        modified=missing,
+        state=missing,
+        user_id=missing,
+        content=missing,
+        reference_type=missing,
+        reference_id=missing
+                            ):
+    return WorkflowMessage.create(context, validated_data_dict).as_dict(context)
+
+@workflow_action_schema_decorator
+def workflow_message_update(context, validated_data_dict, id,
+                            created=missing,
+        modified=missing,
+        state=missing,
+        user_id=missing,
+        content=missing,
+        reference_type=missing,
+        reference_id=missing):
+    return WorkflowMessage.update(context, validated_data_dict).as_dict(context)
+
+@workflow_action_schema_decorator
+def workflow_message_patch(context, validated_data_dict,
+        created=missing,
+        modified=missing,
+        state=missing,
+        user_id=missing,
+        content=missing,
+        reference_type=missing,
+        reference_id=missing):
+  return workflow_message_update(**locals())
+
+@workflow_action_schema_decorator
+def workflow_message_delete(context, validated_data_dict, id):
+  return WorkflowMessage.delete(context, validated_data_dict).as_dict(context)
+
+@workflow_action_schema_decorator
+def workflow_message_purge(context, validated_data_dict, id):
+  return WorkflowMessage.purge(context, validated_data_dict).as_dict(context)
+
+@side_effect_free
+@workflow_action_schema_decorator
+def workflow_message_show(context, validated_data_dict, id):
+  return WorkflowMessage.get(id).as_dict(context)
+
+@side_effect_free
+@workflow_action_schema_decorator
+def workflow_message_list(context, validated_data_dict, **kwargs):
+  order_by = validated_data_dict.get('order_by', None)
+  paginate_kwargs = {k: v for k,v in validated_data_dict.items() if k in ['limit', 'offset']}
+  filter_kwargs = {k: v for k,v in validated_data_dict.items() if not k.startswith('facet') and k not in ['limit', 'offset', 'order_by']}
+  result = {}
+  result['count'] = WorkflowMessage.query(order_by=order_by, **filter_kwargs).count()
+  if validated_data_dict.get('facet'):
+      facet_kwargs = {
+          'fields': validated_data_dict.get('facet_field'),
+          'limit': validated_data_dict.get('facet_limit'),
+          'min_count': validated_data_dict.get('facet_mincount')
+      }
+      result['facets'] = WorkflowMessage.facet(**facet_kwargs, **filter_kwargs).all()
+  result['parameters'] = validated_data_dict
+  result['results'] = [r.as_dict(context) for r in WorkflowMessage.query(**paginate_kwargs, order_by=order_by, **filter_kwargs).all()]
+  return result
+
+###########################################
+###########################################
+###########################################
+###########################################
+
 
 @workflow_action_schema_decorator
 def workflow_dataset_request_message_create(context, validated_data_dict):
     """Just some text"""
     print(f"workflow_dataset_request_create -> {validated_data_dict}")
-    request = WorkflowRequestMessage.create(context, validated_data_dict)
+    request = WorkflowMessage.create(context, validated_data_dict)
     print(f"workflow_dataset_request_create -> return request as dict")
     return request.as_dict()
 
-
-@side_effect_free
-@workflow_action_schema_decorator
-def workflow_dataset_request_show(context, validated_data_dict):
-    """Just some text"""
-    return WorkflowRequest.get(validated_data_dict['id']).as_dict()
-
-
-@side_effect_free
-@workflow_action_schema_decorator
-def workflow_dataset_request_list(context, validated_data_dict):
-    """Just some text"""
-    return [request.as_dict() for request in WorkflowRequest.all()]
 
 
 @workflow_action_schema_decorator
@@ -196,6 +337,7 @@ def workflow_dataset_request_delete(context, validated_data_dict):
         model.repo.commit()
 
 
+@side_effect_free
 @workflow_action_schema_decorator
 def workflow_request_activity_list(context, validated_data_dict):
     print(f"workflow_request_activity_list -> {validated_data_dict}")
@@ -214,6 +356,7 @@ def workflow_request_activity_list(context, validated_data_dict):
     )
 
 
+@side_effect_free
 @workflow_action_schema_decorator
 def workflow_request_message_list(context, validated_data_dict):
     request_id = validated_data_dict.get('id')
